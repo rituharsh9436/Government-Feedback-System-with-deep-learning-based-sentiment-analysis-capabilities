@@ -92,16 +92,6 @@ async def save_policy_comment(policy_id: str, comment: PolicyComment, user: dict
     return {"message": "Comment added successfully", "remaining_replies": 2 - replies}
 
 
-@router.put("/{policy_id}")
-async def update_post(policy_id: str, data: PostCreate, user: dict = Depends(get_current_user)):
-    if user["role"] != "govt":
-        raise HTTPException(status_code=403, detail="Only government users can update policies")
-    result = await db_connection.db["posts"].update_one({"_id": parse_policy_id(policy_id), "author_email": user["email"]}, {"$set": data.model_dump()})
-    if not result.matched_count:
-        raise HTTPException(status_code=404, detail="Your policy was not found")
-    return {"message": "Policy updated"}
-
-
 @router.delete("/{policy_id}")
 async def delete_post(policy_id: str, user: dict = Depends(get_current_user)):
     query = {"_id": parse_policy_id(policy_id)}
