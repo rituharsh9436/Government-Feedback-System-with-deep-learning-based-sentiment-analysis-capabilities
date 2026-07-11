@@ -17,6 +17,8 @@ def public_user(user: dict) -> dict:
         "full_name": user.get("full_name", ""),
         "email": user["email"],
         "contact_number": user.get("contact_number", ""),
+        "department_name": user.get("department_name"),
+        "department_id": user.get("department_id"),
         "role": user["role"],
         "is_approved": user.get("is_approved", True),
     }
@@ -44,6 +46,8 @@ async def signup(user_data: UserSignup):
         "hashed_password": get_password_hash(user_data.password),
         "aadhaar_number": user_data.aadhaar_number,
         "contact_number": user_data.contact_number,
+        "department_name": user_data.department_name if requested_role == UserRole.GOVT else None,
+        "department_id": user_data.department_id if requested_role == UserRole.GOVT else None,
         "role": requested_role.value,
         "is_approved": requested_role == UserRole.PUBLIC,
     }
