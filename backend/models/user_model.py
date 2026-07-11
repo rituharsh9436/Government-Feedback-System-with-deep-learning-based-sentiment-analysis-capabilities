@@ -43,6 +43,8 @@ class UserInDB(BaseModel):
     full_name: str = ""
     aadhaar_number: Optional[str] = None
     contact_number: Optional[str] = None
+    department_name: Optional[str] = None
+    department_id: Optional[str] = None
     is_approved: bool = True
     
     model_config = ConfigDict(
