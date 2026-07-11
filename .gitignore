@@ -9,7 +9,7 @@ docs
 .env
 
 Functionality.md
-RE
+todonext.md
 
 __pycache__
 __init__.py
