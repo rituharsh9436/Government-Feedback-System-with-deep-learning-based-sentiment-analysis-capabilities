@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from database import db_connection
+from config import settings
 from models.user_model import UserInDB, UserRole
 from schemas.user_schema import UserSignup
 from services.auth_service import create_access_token, get_password_hash, verify_password
@@ -36,10 +37,23 @@ async def signup(user_data: UserSignup):
 
     if await db_connection.db["users"].find_one({"email": user_data.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
-    if user_data.aadhaar_number and await db_connection.db["users"].find_one({"aadhaar_number": user_data.aadhaar_number}):
-        raise HTTPException(status_code=400, detail="Aadhaar number already registered")
 
     requested_role = user_data.role
+    if requested_role == UserRole.GOVT:
+        valid_department = await db_connection.db[settings.VALID_DEPARTMENT_IDS_COLLECTION].find_one(
+            {"department_id": user_data.department_id}
+        )
+        if not valid_department:
+            raise HTTPException(status_code=400, detail="Invalid department ID")
+    else:
+        valid_aadhaar = await db_connection.db[settings.VALID_AADHAAR_NUMBERS_COLLECTION].find_one(
+            {"aadhaar_number": user_data.aadhaar_number}
+        )
+        if not valid_aadhaar:
+            raise HTTPException(status_code=400, detail="Aadhaar number is not in the valid Aadhaar register")
+        if await db_connection.db["users"].find_one({"aadhaar_number": user_data.aadhaar_number}):
+            raise HTTPException(status_code=400, detail="Aadhaar number already registered")
+
     new_user = {
         "full_name": user_data.full_name,
         "email": str(user_data.email),
