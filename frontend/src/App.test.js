@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('requires Aadhaar for public signups but not government signups', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /new here\? register/i }));
+
+  expect(screen.getByLabelText(/aadhaar number/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'govt' } });
+
+  expect(screen.queryByLabelText(/aadhaar number/i)).not.toBeInTheDocument();
+  expect(screen.getByLabelText(/department name/i)).toBeInTheDocument();
 });

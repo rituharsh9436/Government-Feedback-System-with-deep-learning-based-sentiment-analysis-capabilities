@@ -36,7 +36,7 @@ async def signup(user_data: UserSignup):
 
     if await db_connection.db["users"].find_one({"email": user_data.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
-    if await db_connection.db["users"].find_one({"aadhaar_number": user_data.aadhaar_number}):
+    if user_data.aadhaar_number and await db_connection.db["users"].find_one({"aadhaar_number": user_data.aadhaar_number}):
         raise HTTPException(status_code=400, detail="Aadhaar number already registered")
 
     requested_role = user_data.role
@@ -44,13 +44,14 @@ async def signup(user_data: UserSignup):
         "full_name": user_data.full_name,
         "email": str(user_data.email),
         "hashed_password": get_password_hash(user_data.password),
-        "aadhaar_number": user_data.aadhaar_number,
         "contact_number": user_data.contact_number,
         "department_name": user_data.department_name if requested_role == UserRole.GOVT else None,
         "department_id": user_data.department_id if requested_role == UserRole.GOVT else None,
         "role": requested_role.value,
         "is_approved": requested_role == UserRole.PUBLIC,
     }
+    if requested_role == UserRole.PUBLIC:
+        new_user["aadhaar_number"] = user_data.aadhaar_number
     await db_connection.db["users"].insert_one(new_user)
     message = "Government account request submitted for admin approval" if requested_role == UserRole.GOVT else "Public account created"
     return {"message": message, "is_approved": new_user["is_approved"]}
