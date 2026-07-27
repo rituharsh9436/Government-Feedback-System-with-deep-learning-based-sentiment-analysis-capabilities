@@ -28,6 +28,14 @@ __init__.py
 # production
 /build
 
+
+backend/seed_data.py
+create_presentation.js
+fieldsandschemas.md
+Smart_Government_Feedback_System_Presentation.pptx
+structure.md
+workflow.md
+
 # misc
 .DS_Store
 .env.local
