@@ -2,6 +2,8 @@ fastapi
 uvicorn
 motor
 pydantic[email]
+pydantic-settings
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+slowapi
