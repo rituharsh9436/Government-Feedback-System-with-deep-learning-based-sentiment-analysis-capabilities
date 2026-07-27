@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from database import db_connection
 from models.post_model import PolicyComment
 from schemas.post_schema import PostCreate
-from services.dependencies import get_current_user
+from services.dependencies import get_current_user, RequireRole
 
 router = APIRouter(prefix="/posts", tags=["Policies"])
 
@@ -24,9 +24,7 @@ def serialize(post: dict) -> dict:
 
 
 @router.post("/", status_code=201)
-async def create_post(data: PostCreate, user: dict = Depends(get_current_user)):
-    if user["role"] != "govt":
-        raise HTTPException(status_code=403, detail="Only government users can create policies")
+async def create_post(data: PostCreate, user: dict = Depends(RequireRole(["govt"]))):
     post = data.model_dump()
     post.update({"author_email": user["email"], "author_role": "govt", "created_at": datetime.utcnow(), "comments": []})
     result = await db_connection.db["posts"].insert_one(post)
@@ -59,9 +57,7 @@ async def get_all_posts(
 
 
 @router.get("/analytics/overall-sentiment")
-async def overall_sentiment(user: dict = Depends(get_current_user)):
-    if user["role"] != "govt":
-        raise HTTPException(status_code=403, detail="Only government users can view sentiment analysis")
+async def overall_sentiment(user: dict = Depends(RequireRole(["govt"]))):
     pipeline = [{"$match": {"author_email": user["email"]}}, {"$project": {"comment_count": {"$size": "$comments"}}}, {"$group": {"_id": None, "policy_count": {"$sum": 1}, "comment_count": {"$sum": "$comment_count"}}}]
     data = [item async for item in db_connection.db["posts"].aggregate(pipeline)]
     totals = data[0] if data else {"policy_count": 0, "comment_count": 0}
@@ -77,9 +73,7 @@ async def get_post(policy_id: str):
 
 
 @router.post("/{policy_id}/comments", status_code=201)
-async def save_policy_comment(policy_id: str, comment: PolicyComment, user: dict = Depends(get_current_user)):
-    if user["role"] != "public":
-        raise HTTPException(status_code=403, detail="Only public users can comment on policies")
+async def save_policy_comment(policy_id: str, comment: PolicyComment, user: dict = Depends(RequireRole(["public"]))):
     object_id = parse_policy_id(policy_id)
     post = await db_connection.db["posts"].find_one({"_id": object_id}, {"comments": 1})
     if not post:
@@ -93,12 +87,10 @@ async def save_policy_comment(policy_id: str, comment: PolicyComment, user: dict
 
 
 @router.delete("/{policy_id}")
-async def delete_post(policy_id: str, user: dict = Depends(get_current_user)):
+async def delete_post(policy_id: str, user: dict = Depends(RequireRole(["admin", "govt"]))):
     query = {"_id": parse_policy_id(policy_id)}
     if user["role"] == "govt":
         query["author_email"] = user["email"]
-    elif user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Only government users or administrators can delete policies")
     result = await db_connection.db["posts"].delete_one(query)
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="Policy not found or not owned by you")
@@ -106,9 +98,7 @@ async def delete_post(policy_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{policy_id}/sentiment")
-async def policy_sentiment(policy_id: str, user: dict = Depends(get_current_user)):
-    if user["role"] != "govt":
-        raise HTTPException(status_code=403, detail="Only government users can view sentiment analysis")
+async def policy_sentiment(policy_id: str, user: dict = Depends(RequireRole(["govt"]))):
     post = await db_connection.db["posts"].find_one({"_id": parse_policy_id(policy_id), "author_email": user["email"]})
     if not post:
         raise HTTPException(status_code=404, detail="Your policy was not found")
