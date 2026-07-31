@@ -186,6 +186,8 @@ export const SignupForm = ({ onToggleMode, onSuccess }) => {
           type="password" 
           required 
           minLength="8" 
+          title="Use at least 8 characters, including uppercase, lowercase, a number, and a special character."
+          hint="At least 8 characters with uppercase, lowercase, a number, and a special character."
           value={formData.password} 
           onChange={e => update('password', e.target.value)} 
           placeholder="••••••••"
