@@ -14,6 +14,6 @@ class Settings(BaseSettings):
     BREVO_SMTP_USER: str | None = None
     BREVO_SMTP_PASSWORD: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()
