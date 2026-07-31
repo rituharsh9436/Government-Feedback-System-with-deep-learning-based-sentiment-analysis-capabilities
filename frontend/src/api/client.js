@@ -1,5 +1,17 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+const formatApiError = (detail) => {
+  if (!Array.isArray(detail)) return detail || 'An error occurred';
+
+  return detail
+    .map(({ loc = [], msg = 'Invalid value' }) => {
+      const field = loc.filter((part) => part !== 'body').join('.');
+      const message = msg.replace(/^Value error,\s*/i, '');
+      return field ? `${field.replace(/_/g, ' ')}: ${message}` : message;
+    })
+    .join(' ');
+};
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -73,7 +85,7 @@ export async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new ApiError(data.detail || data.message || 'An error occurred', response.status);
+    throw new ApiError(formatApiError(data.detail || data.message), response.status);
   }
 
   return data;

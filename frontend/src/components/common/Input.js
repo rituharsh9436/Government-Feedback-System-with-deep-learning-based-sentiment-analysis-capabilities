@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { cn } from "../../utils";
 
-export const Input = forwardRef(({ label, error, className = '', ...props }, ref) => {
+export const Input = forwardRef(({ label, error, hint, className = '', ...props }, ref) => {
   return (
     <div className="flex flex-col space-y-1.5 w-full">
       {label && <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700">{label}</label>}
@@ -15,6 +15,7 @@ export const Input = forwardRef(({ label, error, className = '', ...props }, ref
         {...props}
       />
       {error && <span className="text-destructive text-xs font-medium">{error}</span>}
+      {!error && hint && <span className="text-xs text-slate-500">{hint}</span>}
     </div>
   );
 });
