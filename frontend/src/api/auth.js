@@ -8,17 +8,22 @@ export const authAPI = {
       body: new URLSearchParams({ username: email, password }),
     });
     localStorage.setItem('role', data.role);
-    if (data.csrf_token) {
-      localStorage.setItem('csrf_token', data.csrf_token);
-    }
     return data;
   },
 
-  signup: async (userData) => {
-    return request('/auth/signup', {
+  requestOtp: async (userData) => {
+    return request('/auth/signup/request-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
+    });
+  },
+
+  verifyOtp: async (verifyData) => {
+    return request('/auth/signup/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verifyData),
     });
   },
 
@@ -29,7 +34,6 @@ export const authAPI = {
       // Ignore errors on logout
     } finally {
       localStorage.removeItem('role');
-      localStorage.removeItem('csrf_token');
     }
   },
 

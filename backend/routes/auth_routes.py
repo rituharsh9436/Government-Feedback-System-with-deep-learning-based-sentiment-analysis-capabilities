@@ -5,34 +5,30 @@ from typing import Optional
 from database import db_connection
 from config import settings
 from models.user_model import UserInDB, UserRole
-from schemas.user_schema import UserSignup, UserLogin
+from schemas.user_schema import UserSignup, UserLogin, UserResponse, UserPaginatedResponse
+from schemas.otp_schema import OTPRequest, OTPVerify
 from services.auth_service import create_access_token, create_refresh_token, get_password_hash, verify_password, generate_csrf_token, decode_token
 from services.dependencies import get_current_user
 from services.audit_service import log_audit_action
+from services.email_service import send_otp_email
 from rate_limiter import limiter
-from datetime import datetime
+from datetime import datetime, timedelta
+import secrets
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-def public_user(user: dict) -> dict:
-    return {
-        "id": str(user["_id"]),
-        "full_name": user.get("full_name", ""),
-        "email": user["email"],
-        "contact_number": user.get("contact_number", ""),
-        "department_name": user.get("department_name"),
-        "department_id": user.get("department_id"),
-        "role": user["role"],
-        "is_approved": user.get("is_approved", True),
-    }
+def map_user_to_response(user: dict) -> dict:
+    user["id"] = str(user["_id"])
+    return user
+
 
 def require_admin(current_user: dict) -> None:
     if current_user["role"] != UserRole.ADMIN.value:
         raise HTTPException(status_code=403, detail="Administrator access required")
 
-@router.post("/signup", status_code=status.HTTP_201_CREATED)
+@router.post("/signup/request-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
-async def signup(request: Request, user_data: UserSignup):
+async def request_otp(request: Request, user_data: OTPRequest):
     if user_data.role == UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin accounts can only be created manually")
 
@@ -46,33 +42,78 @@ async def signup(request: Request, user_data: UserSignup):
         )
         if not valid_department:
             raise HTTPException(status_code=400, detail="Invalid department ID")
-    else:
-        valid_aadhaar = await db_connection.db[settings.VALID_AADHAAR_NUMBERS_COLLECTION].find_one(
-            {"aadhaar_number": user_data.aadhaar_number}
+
+    # Generate 6-digit OTP
+    otp = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+    hashed_otp = get_password_hash(otp)
+
+    # Calculate expiration (5 minutes)
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    pending_user = {
+        "email": str(user_data.email),
+        "hashed_otp": hashed_otp,
+        "user_data": user_data.model_dump(),
+        "expires_at": expires_at,
+        "attempts": 0
+    }
+
+    # Upsert the pending user
+    await db_connection.db["pending_users"].update_one(
+        {"email": str(user_data.email)},
+        {"$set": pending_user},
+        upsert=True
+    )
+
+    await send_otp_email(str(user_data.email), otp)
+    await log_audit_action("request_otp", str(user_data.email))
+    
+    return {"message": "OTP sent to your email. It expires in 5 minutes."}
+
+@router.post("/signup/verify-otp", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def verify_otp(request: Request, verify_data: OTPVerify):
+    email = str(verify_data.email)
+    pending_record = await db_connection.db["pending_users"].find_one({"email": email})
+
+    if not pending_record:
+        raise HTTPException(status_code=400, detail="No pending signup found or OTP expired. Please request a new OTP.")
+
+    if pending_record["attempts"] >= 5:
+        await db_connection.db["pending_users"].delete_one({"email": email})
+        raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
+
+    if not verify_password(verify_data.otp, pending_record["hashed_otp"]):
+        await db_connection.db["pending_users"].update_one(
+            {"email": email},
+            {"$inc": {"attempts": 1}}
         )
-        if not valid_aadhaar:
-            raise HTTPException(status_code=400, detail="Aadhaar number is not in the valid Aadhaar register")
-        if await db_connection.db["users"].find_one({"aadhaar_number": user_data.aadhaar_number}):
-            raise HTTPException(status_code=400, detail="Aadhaar number already registered")
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    # OTP is valid, create the user account
+    user_data = pending_record["user_data"]
+    requested_role = UserRole(user_data["role"])
 
     new_user = {
-        "full_name": user_data.full_name,
-        "email": str(user_data.email),
-        "hashed_password": get_password_hash(user_data.password),
-        "contact_number": user_data.contact_number,
-        "department_name": user_data.department_name if requested_role == UserRole.GOVT else None,
-        "department_id": user_data.department_id if requested_role == UserRole.GOVT else None,
+        "full_name": user_data["full_name"],
+        "email": email,
+        "hashed_password": get_password_hash(user_data["password"]),
+        "department_name": user_data.get("department_name") if requested_role == UserRole.GOVT else None,
+        "department_id": user_data.get("department_id") if requested_role == UserRole.GOVT else None,
         "role": requested_role.value,
         "is_approved": requested_role == UserRole.PUBLIC,
     }
-    if requested_role == UserRole.PUBLIC:
-        new_user["aadhaar_number"] = user_data.aadhaar_number
-        
+
     await db_connection.db["users"].insert_one(new_user)
-    await log_audit_action("signup", new_user["email"], details=f"Role: {requested_role.value}")
+    
+    # Remove pending record
+    await db_connection.db["pending_users"].delete_one({"email": email})
+    
+    await log_audit_action("signup", email, details=f"Role: {requested_role.value} (OTP Verified)")
     
     message = "Government account request submitted for admin approval" if requested_role == UserRole.GOVT else "Public account created"
     return {"message": message, "is_approved": new_user["is_approved"]}
+
 
 
 @router.post("/login")
@@ -95,7 +136,7 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
     response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="lax") # Readable by JS for headers
 
     await log_audit_action("login", user.email)
-    return {"message": "Successfully logged in", "role": user.role.value, "csrf_token": csrf_token}
+    return {"message": "Successfully logged in", "role": user.role.value}
 
 @router.post("/refresh")
 @limiter.limit("10/minute")
@@ -141,31 +182,52 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
     return {"message": "Successfully logged out"}
 
 
-@router.get("/me")
+@router.get("/me", response_model=UserResponse)
 async def me(current_user: dict = Depends(get_current_user)):
     user = await db_connection.db["users"].find_one({"email": current_user["email"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return public_user(user)
+    return map_user_to_response(user)
 
 
-@router.get("/government-requests")
-async def list_government_requests(current_user: dict = Depends(get_current_user)):
+@router.get("/government-requests", response_model=UserPaginatedResponse)
+async def list_government_requests(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    current_user: dict = Depends(get_current_user)
+):
     require_admin(current_user)
+    skip = (page - 1) * limit
+    
+    query = {"role": UserRole.GOVT.value, "is_approved": False}
+    total = await db_connection.db["users"].count_documents(query)
+    
     users = []
-    cursor = db_connection.db["users"].find({"role": UserRole.GOVT.value, "is_approved": False})
+    cursor = db_connection.db["users"].find(query).skip(skip).limit(limit)
     async for user in cursor:
-        users.append(public_user(user))
-    return users
+        users.append(map_user_to_response(user))
+        
+    return {"items": users, "total": total, "page": page, "limit": limit}
 
 
-@router.get("/users")
-async def list_managed_users(current_user: dict = Depends(get_current_user)):
+@router.get("/users", response_model=UserPaginatedResponse)
+async def list_managed_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    current_user: dict = Depends(get_current_user)
+):
     require_admin(current_user)
+    skip = (page - 1) * limit
+    
+    query = {"role": {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}}
+    total = await db_connection.db["users"].count_documents(query)
+    
     users = []
-    async for user in db_connection.db["users"].find({"role": {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}}):
-        users.append(public_user(user))
-    return users
+    cursor = db_connection.db["users"].find(query).skip(skip).limit(limit)
+    async for user in cursor:
+        users.append(map_user_to_response(user))
+        
+    return {"items": users, "total": total, "page": page, "limit": limit}
 
 
 @router.post("/government-requests/{user_id}/approve")

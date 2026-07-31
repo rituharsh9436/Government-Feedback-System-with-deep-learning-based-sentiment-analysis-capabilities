@@ -4,69 +4,90 @@ import { usePolicies, useOverallAnalysis } from '../hooks/usePolicies';
 import { PolicyCard } from '../features/policies/PolicyCard';
 import { PolicyForm } from '../features/policies/PolicyForm';
 import { Button } from '../components/common/Button';
-import { Input } from '../components/common/Input';
+import { useDebounce } from '../hooks/useDebounce';
+import { Search, Filter, CalendarClock, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 
 export const FeedPage = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({ keyword: '', recent: false, sort: 'newest', dateFrom: '', dateTo: '' });
-  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const [filters, setFilters] = useState({ keyword: '', recent: false, sort: 'newest', dateFrom: '', dateTo: '', page: 1, limit: 10 });
+  const debouncedFilters = useDebounce(filters, 400);
+
   const [repostSource, setRepostSource] = useState(null);
   const [showOverallAnalysis, setShowOverallAnalysis] = useState(false);
 
-  // Use a simple timeout for debouncing filters
-  // In a real app, use a proper useDebounce hook
   const handleFilterChange = (updates) => {
-    const newFilters = { ...filters, ...updates };
-    setFilters(newFilters);
-    setTimeout(() => setDebouncedFilters(newFilters), 300);
+    setFilters(prev => ({ ...prev, ...updates, page: 1 }));
   };
 
-  const { data: policies, isLoading } = usePolicies(debouncedFilters);
+  const handlePageChange = (newPage) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+  };
+
+  const { data, isLoading } = usePolicies(debouncedFilters);
   const { data: overallAnalysis, isLoading: isAnalysisLoading } = useOverallAnalysis();
 
   const isGovernment = user?.role === 'govt';
+  const policies = data?.items || [];
+  const totalPages = data?.pages || 1;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-8">
       {isGovernment && (
-        <section className="mb-10">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">
-              {repostSource ? 'Repost policy with updates' : 'Government Actions'}
-            </h2>
+        <section className="space-y-6">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                {repostSource ? 'Repost Policy' : 'Government Actions'}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Publish new policies and gather public sentiment.
+              </p>
+            </div>
             <Button 
-              variant="outline" 
+              variant="secondary" 
               onClick={() => setShowOverallAnalysis(!showOverallAnalysis)}
+              className="flex items-center gap-2"
             >
-              {showOverallAnalysis ? 'Hide Analysis' : 'Overall Feedback Analysis'}
+              <BarChart3 className="w-4 h-4" />
+              {showOverallAnalysis ? 'Hide Analysis' : 'Overall Analysis'}
             </Button>
           </div>
 
           {showOverallAnalysis && (
-            <div className="card mb-6 bg-primary-50 border-primary-100">
-              {isAnalysisLoading ? (
-                <p>Loading analysis...</p>
-              ) : (
-                overallAnalysis && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Overall Policy Sentiment</h3>
-                    <div className="grid grid-cols-3 gap-4 text-center mt-4">
-                      <div className="p-4 bg-white rounded-lg shadow-sm">
-                        <div className="text-3xl font-bold text-primary-600">{overallAnalysis.policy_count}</div>
-                        <div className="text-sm text-slate-600 mt-1">Total Policies</div>
-                      </div>
-                      <div className="p-4 bg-white rounded-lg shadow-sm">
-                        <div className="text-3xl font-bold text-primary-600">{overallAnalysis.comment_count}</div>
-                        <div className="text-sm text-slate-600 mt-1">Total Replies</div>
-                      </div>
-                      <div className="p-4 bg-white rounded-lg shadow-sm">
-                        <div className="text-xl font-bold text-slate-800 capitalize mt-2">{overallAnalysis.analysis_status}</div>
-                        <div className="text-sm text-slate-600 mt-1">Status</div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-700">Platform Analytics</h3>
+              </div>
+              <div className="p-6">
+                {isAnalysisLoading ? (
+                  <div className="animate-pulse flex space-x-4">
+                    <div className="flex-1 space-y-4 py-1">
+                      <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-slate-200 rounded"></div>
+                        <div className="h-4 bg-slate-200 rounded w-5/6"></div>
                       </div>
                     </div>
                   </div>
-                )
-              )}
+                ) : (
+                  overallAnalysis && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="flex flex-col">
+                        <span className="text-3xl font-bold text-primary-600">{overallAnalysis.policy_count}</span>
+                        <span className="text-sm font-medium text-slate-500 mt-1">Total Policies</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-3xl font-bold text-primary-600">{overallAnalysis.comment_count}</span>
+                        <span className="text-sm font-medium text-slate-500 mt-1">Public Replies</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xl font-bold text-slate-800 capitalize mt-2">{overallAnalysis.analysis_status}</span>
+                        <span className="text-sm font-medium text-slate-500 mt-1">Analysis Status</span>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
           )}
 
@@ -78,52 +99,118 @@ export const FeedPage = () => {
         </section>
       )}
 
-      <section className="card mb-8 bg-slate-50">
-        <h3 className="font-semibold mb-4 text-slate-700">Filter & Search</h3>
-        <div className="flex flex-wrap gap-4 items-end">
-          <Input 
-            className="flex-1 min-w-[200px] mb-0"
-            placeholder="Search policies..." 
-            value={filters.keyword} 
-            onChange={(e) => handleFilterChange({ keyword: e.target.value })} 
-          />
-          <div className="form-group mb-0">
-            <select 
-              className="form-input"
-              value={filters.sort} 
-              onChange={(e) => handleFilterChange({ sort: e.target.value })}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="most_replied">Most replied</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 h-10 px-4 bg-white border border-slate-200 rounded-md">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sticky top-[72px] z-30">
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
-              type="checkbox" 
-              id="recent"
-              checked={filters.recent} 
-              onChange={(e) => handleFilterChange({ recent: e.target.checked })} 
+              type="text"
+              className="w-full h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all placeholder:text-slate-400"
+              placeholder="Search policies by keyword..." 
+              value={filters.keyword} 
+              onChange={(e) => handleFilterChange({ keyword: e.target.value })} 
             />
-            <label htmlFor="recent" className="text-sm cursor-pointer select-none">Last 7 days</label>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex items-center">
+              <Filter className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
+              <select 
+                className="h-10 pl-9 pr-8 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer hover:bg-slate-50"
+                value={filters.sort} 
+                onChange={(e) => handleFilterChange({ sort: e.target.value })}
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="most_replied">Most replied</option>
+              </select>
+            </div>
+            
+            <label className="flex items-center gap-2 h-10 px-4 bg-white border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition-colors select-none group">
+              <input 
+                type="checkbox" 
+                className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                checked={filters.recent} 
+                onChange={(e) => handleFilterChange({ recent: e.target.checked })} 
+              />
+              <CalendarClock className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+              <span className="text-sm font-medium text-slate-700">7 Days</span>
+            </label>
           </div>
         </div>
       </section>
 
-      <section aria-busy={isLoading}>
+      <section aria-busy={isLoading} className="space-y-6">
         {isLoading ? (
-          <div className="text-center py-12 text-slate-500">Loading policies...</div>
-        ) : policies?.length > 0 ? (
-          policies.map((policy) => (
-            <PolicyCard 
-              key={policy._id} 
-              policy={policy} 
-              onRepost={setRepostSource} 
-            />
-          ))
+          <div className="space-y-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-200"></div>
+                  <div className="flex-1 space-y-3 py-1">
+                    <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                    <div className="h-3 bg-slate-200 rounded w-1/3"></div>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3">
+                  <div className="h-4 bg-slate-200 rounded w-full"></div>
+                  <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : policies.length > 0 ? (
+          <div className="space-y-6">
+            {policies.map((policy) => (
+              <PolicyCard 
+                key={policy.id || policy._id} 
+                policy={policy} 
+                onRepost={setRepostSource} 
+              />
+            ))}
+            
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center py-6 border-t border-slate-200 mt-8">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={filters.page <= 1}
+                  onClick={() => handlePageChange(filters.page - 1)}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Previous
+                </Button>
+                <span className="text-sm font-medium text-slate-600">
+                  Page {filters.page} of {totalPages}
+                </span>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  disabled={filters.page >= totalPages}
+                  onClick={() => handlePageChange(filters.page + 1)}
+                  className="flex items-center gap-1"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="text-center py-12 card bg-slate-50 text-slate-500">
-            No policies match your current filters.
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed">
+            <Search className="w-10 h-10 text-slate-300 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900">No policies found</h3>
+            <p className="text-sm text-slate-500 mt-1 max-w-sm text-center">
+              We couldn't find anything matching your current filters. Try adjusting your search terms.
+            </p>
+            {(filters.keyword || filters.recent) && (
+              <Button 
+                variant="ghost" 
+                className="mt-4"
+                onClick={() => setFilters({ keyword: '', recent: false, sort: 'newest', page: 1, limit: 10 })}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         )}
       </section>

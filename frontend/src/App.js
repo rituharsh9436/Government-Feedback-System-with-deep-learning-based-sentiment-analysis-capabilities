@@ -7,6 +7,9 @@ import { AuthPage } from './pages/AuthPage';
 import { FeedPage } from './pages/FeedPage';
 import { AdminPage } from './pages/AdminPage';
 
+import { Toaster } from 'react-hot-toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,10 +22,12 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Toaster position="top-right" />
+          <Router>
+            <Routes>
             <Route path="/login" element={<AuthPage />} />
             
             <Route element={<Layout />}>
@@ -44,6 +49,7 @@ function App() {
         </Router>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

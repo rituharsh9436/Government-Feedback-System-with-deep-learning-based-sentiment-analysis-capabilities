@@ -9,8 +9,14 @@ export const useLogin = () => {
   });
 };
 
-export const useSignup = () => {
+export const useRequestOtp = () => {
   return useMutation({
-    mutationFn: (userData) => authAPI.signup(userData),
+    mutationFn: (userData) => authAPI.requestOtp(userData),
+  });
+};
+
+export const useVerifyOtp = () => {
+  return useMutation({
+    mutationFn: (verifyData) => authAPI.verifyOtp(verifyData),
   });
 };
