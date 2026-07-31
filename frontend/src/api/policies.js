@@ -3,6 +3,8 @@ import { request } from './client';
 export const policiesAPI = {
   getAll: async (filters = {}) => {
     const params = new URLSearchParams();
+    if (filters.page) params.set('page', filters.page);
+    if (filters.limit) params.set('limit', filters.limit);
     if (filters.sort) params.set('sort', filters.sort);
     if (filters.keyword?.trim()) params.set('keyword', filters.keyword.trim());
     if (filters.recent) params.set('recent', 'true');

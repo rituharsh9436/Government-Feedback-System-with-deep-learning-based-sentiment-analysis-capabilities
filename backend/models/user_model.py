@@ -41,8 +41,6 @@ class UserInDB(BaseModel):
     hashed_password: str
     role: UserRole = UserRole.PUBLIC  # Default to public user
     full_name: str = ""
-    aadhaar_number: Optional[str] = None
-    contact_number: Optional[str] = None
     department_name: Optional[str] = None
     department_id: Optional[str] = None
     is_approved: bool = True

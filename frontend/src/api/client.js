@@ -10,6 +10,13 @@ export class ApiError extends Error {
 let isRefreshing = false;
 let refreshSubscribers = [];
 
+const getCookie = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+
 const subscribeTokenRefresh = (cb) => {
   refreshSubscribers.push(cb);
 };
@@ -20,7 +27,7 @@ const onRefreshed = () => {
 };
 
 export async function request(path, options = {}) {
-  const csrfToken = localStorage.getItem('csrf_token');
+  const csrfToken = getCookie('csrf_token');
   const headers = { ...options.headers };
 
   if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {

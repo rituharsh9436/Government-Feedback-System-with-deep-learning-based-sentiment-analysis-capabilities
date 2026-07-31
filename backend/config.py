@@ -5,7 +5,6 @@ class Settings(BaseSettings):
     MONGO_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "auth_db" 
     VALID_DEPARTMENT_IDS_COLLECTION: str = "valid_department_ids"
-    VALID_AADHAAR_NUMBERS_COLLECTION: str = "valid_aadhaar_numbers"
     SECRET_KEY: str = "super_secret_key_change_me_in_production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

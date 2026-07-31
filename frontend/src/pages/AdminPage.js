@@ -1,120 +1,127 @@
-import { useState, useEffect } from 'react';
-import { request } from '../api/client';
+import { useAdmin } from '../hooks/useAdmin';
 import { Button } from '../components/common/Button';
+import { Badge } from '../components/common/Badge';
+import toast from 'react-hot-toast';
+import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2 } from 'lucide-react';
 
 export const AdminPage = () => {
-  const [requests, setRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { requests, users, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const isProcessing = isApproving || isDeleting;
 
-  const loadAccounts = async () => {
-    setIsLoading(true);
-    try {
-      const [pending, managed] = await Promise.all([
-        request('/auth/government-requests'),
-        request('/auth/users')
-      ]);
-      setRequests(pending);
-      setUsers(managed);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const approve = async (id) => {
-    setIsProcessing(true);
-    try {
-      await request(`/auth/government-requests/${id}/approve`, { method: 'POST' });
-      await loadAccounts();
-    } catch (e) {
-      alert(e.message || 'Error approving request');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const deleteUser = async (user) => {
-    if (!window.confirm(`Delete ${user.full_name}'s account?`)) return;
-    setIsProcessing(true);
-    try {
-      await request(`/auth/users/${user.id}`, { method: 'DELETE' });
-      await loadAccounts();
-    } catch (e) {
-      alert(e.message || 'Error deleting user');
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleDelete = (user) => {
+    toast((t) => (
+      <div className="flex flex-col">
+        <p className="mb-3 text-sm font-medium text-slate-800">Are you sure you want to delete <b className="text-slate-900">{user.full_name}</b>'s account?</p>
+        <div className="flex gap-2">
+          <Button variant="danger" size="sm" onClick={() => {
+            deleteUser(user.id);
+            toast.dismiss(t.id);
+          }}>Delete User</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.dismiss(t.id)}>Cancel</Button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
 
   const pendingIds = new Set(requests.map(u => u.id));
+  const activeUsers = users.filter(u => !pendingIds.has(u.id));
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8 flex justify-between items-end border-b border-slate-200 pb-4">
+    <div className="max-w-5xl mx-auto space-y-10">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h2 className="text-3xl font-bold font-display">Account Management</h2>
-          <p className="text-muted mt-2">Approve government requests and manage users.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <ShieldCheck className="w-8 h-8 text-primary-600" />
+            Admin Dashboard
+          </h2>
+          <p className="text-slate-500 mt-2">Manage user accounts and government access requests.</p>
         </div>
-        <Button variant="outline" onClick={loadAccounts} disabled={isLoading || isProcessing}>
-          {isLoading ? 'Loading...' : 'Refresh Data'}
+        <Button variant="outline" onClick={refetch} disabled={isLoading || isProcessing} className="shrink-0 bg-white">
+          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh Data
         </Button>
       </div>
 
-      <section className="mb-10">
-        <h3 className="text-xl font-semibold mb-4 text-slate-800">Pending Approvals</h3>
-        <div className="space-y-4">
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-amber-500" />
+            Pending Approvals
+          </h3>
+          <Badge variant="warning">{requests.length} Requests</Badge>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           {requests.length === 0 ? (
-            <div className="card text-center text-slate-500 py-8">No pending requests.</div>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+              <ShieldCheck className="w-12 h-12 text-slate-200 mb-3" />
+              <p>No pending requests.</p>
+            </div>
           ) : (
-            requests.map((user) => (
-              <div className="card flex justify-between items-center bg-warning/5 border-warning/20" key={user.id}>
-                <div>
-                  <p className="font-bold">{user.full_name}</p>
-                  <p className="text-sm text-slate-600">{user.email}</p>
-                  <p className="text-sm font-medium mt-1 text-slate-800">
-                    {user.department_name} ({user.department_id})
-                  </p>
-                </div>
-                <Button disabled={isProcessing} onClick={() => approve(user.id)}>
-                  Approve Request
-                </Button>
-              </div>
-            ))
+            <ul className="divide-y divide-slate-100">
+              {requests.map((user) => (
+                <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" key={user.id}>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-900 text-lg">{user.full_name}</p>
+                    <p className="text-sm text-slate-500">{user.email}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Building2 className="w-4 h-4 text-slate-400" />
+                      <p className="text-sm font-medium text-slate-700">
+                        {user.department_name} <span className="text-slate-400 font-normal">({user.department_id})</span>
+                      </p>
+                    </div>
+                  </div>
+                  <Button disabled={isProcessing} onClick={() => approve(user.id)} className="shrink-0">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Approve Request
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </section>
 
-      <section>
-        <h3 className="text-xl font-semibold mb-4 text-slate-800">All Users</h3>
-        <div className="space-y-4">
-          {users.filter(u => !pendingIds.has(u.id)).map((user) => (
-            <div className="card flex justify-between items-center" key={user.id}>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-bold">{user.full_name}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-primary-100 text-primary-700' : user.role === 'govt' ? 'bg-success/20 text-success' : 'bg-slate-200 text-slate-700'}`}>
-                    {user.role}
-                  </span>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary-500" />
+            Active Users
+          </h3>
+          <Badge variant="primary">{activeUsers.length} Users</Badge>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <ul className="divide-y divide-slate-100">
+            {activeUsers.map((user) => (
+              <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" key={user.id}>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <p className="font-semibold text-slate-900">{user.full_name}</p>
+                    <Badge variant={user.role === 'admin' ? 'primary' : user.role === 'govt' ? 'success' : 'default'} className="uppercase text-[10px]">
+                      {user.role}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-500">{user.email}</p>
+                  
+                  {user.department_name && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      <p className="text-xs font-medium text-slate-600">
+                        {user.department_name} <span className="text-slate-400 font-normal">({user.department_id})</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-slate-600">{user.email}</p>
-                {user.department_name && (
-                  <p className="text-sm font-medium mt-1 text-slate-800">
-                    {user.department_name} ({user.department_id})
-                  </p>
+                
+                {user.role !== 'admin' && (
+                  <Button variant="ghost" size="icon" disabled={isProcessing} onClick={() => handleDelete(user)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 shrink-0">
+                    <UserX className="w-5 h-5" />
+                  </Button>
                 )}
-              </div>
-              <Button variant="danger" disabled={isProcessing} onClick={() => deleteUser(user)}>
-                Delete Account
-              </Button>
-            </div>
-          ))}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </div>
