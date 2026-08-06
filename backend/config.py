@@ -1,15 +1,16 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+import json
 
 class Settings(BaseSettings):
-    MONGO_URL: str = "mongodb://localhost:27017"
-    DATABASE_NAME: str = "auth_db" 
+    MONGO_URL: str
+    DATABASE_NAME: str = "smart_gov_feedback" 
     VALID_DEPARTMENT_IDS_COLLECTION: str = "valid_department_ids"
-    SECRET_KEY: str = "super_secret_key_change_me_in_production"
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000"]
     
     BREVO_SMTP_USER: str | None = None
     BREVO_SMTP_PASSWORD: str | None = None
