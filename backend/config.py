@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000"]
     
-    BREVO_SMTP_USER: str | None = None
-    BREVO_SMTP_PASSWORD: str | None = None
+    BREVO_API_KEY: str | None = None
+    MAIL_FROM_EMAIL: str | None = None
+    MAIL_FROM_NAME: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
