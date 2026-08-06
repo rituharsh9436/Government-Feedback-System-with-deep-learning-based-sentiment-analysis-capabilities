@@ -1,20 +1,6 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:6.0
-    container_name: smart-gov-mongodb
-    restart: unless-stopped
-    # Do not expose the port to the host machine in production unless necessary
-    # ports:
-    #   - "27017:27017" 
-    volumes:
-      - mongodb_data:/data/db
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-
   backend:
     build:
       context: ./backend
@@ -28,27 +14,12 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - mongodb
       - ml-service
     deploy:
       resources:
         limits:
           memory: 512M
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: smart-gov-frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   ml-service:
     build:
@@ -56,12 +27,11 @@ services:
       dockerfile: Dockerfile
     container_name: smart-gov-ml-service
     restart: unless-stopped
-    ports:
-      - "8001:8001"
+    # Expose internally so backend can reach it, but allow scaling without host port conflicts
+    expose:
+      - "8001"
     deploy:
       resources:
         limits:
           memory: 2G
 
-volumes:
-  mongodb_data:
