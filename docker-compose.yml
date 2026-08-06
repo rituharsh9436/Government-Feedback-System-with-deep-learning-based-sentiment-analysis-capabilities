@@ -4,35 +4,48 @@ services:
   mongodb:
     image: mongo:6.0
     container_name: smart-gov-mongodb
-    ports:
-      - "27017:27017"
+    restart: unless-stopped
+    # Do not expose the port to the host machine in production unless necessary
+    # ports:
+    #   - "27017:27017" 
     volumes:
       - mongodb_data:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: smart-gov-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      - MONGO_URL=mongodb://mongodb:27017
-      - DB_NAME=smart_gov_feedback
-      - JWT_SECRET=your_super_secret_key_change_in_production
-      - ADMIN_SECRET=admin123
+    env_file:
+      - ./backend/.env
     depends_on:
       - mongodb
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: smart-gov-frontend
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   mongodb_data:

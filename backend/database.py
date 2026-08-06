@@ -1,9 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import settings
-import logging
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from services.logger_service import app_logger
+import asyncio
 
 class Database:
     client: AsyncIOMotorClient = None
@@ -27,21 +25,31 @@ async def create_indexes():
             "expires_at", expireAfterSeconds=0
         )
         
-        logger.info("Database indexes created successfully.")
+        app_logger.info("Database indexes created successfully.")
     except Exception as e:
-        logger.error(f"Error creating database indexes: {e}")
+        app_logger.error(f"Error creating database indexes: {e}")
 
 async def connect_to_mongo():
     try:
-        db_connection.client = AsyncIOMotorClient(settings.MONGO_URL)
+        # Configure connection pooling for production
+        db_connection.client = AsyncIOMotorClient(
+            settings.MONGO_URL,
+            maxPoolSize=50,
+            minPoolSize=10,
+            serverSelectionTimeoutMS=5000
+        )
         db_connection.db = db_connection.client[settings.DATABASE_NAME]
+        
         # Send a ping to confirm a successful connection
         await db_connection.client.admin.command('ping')
-        logger.info("Connected successfully to MongoDB Atlas!")
+        app_logger.info("Connected successfully to MongoDB Atlas!")
         await create_indexes()
     except Exception as e:
-        logger.error(f"Could not connect to MongoDB: {e}")
+        app_logger.error(f"Could not connect to MongoDB: {e}")
+        # Depending on deployment strategy, we could sys.exit(1) here if DB is strictly required at startup.
+        # But we'll let it retry logic or kubernetes handles restart.
 
 async def close_mongo_connection():
     if db_connection.client:
+        app_logger.info("Closing MongoDB connection...")
         db_connection.client.close()
