@@ -56,7 +56,8 @@ async def overall_sentiment(user: dict = Depends(RequireRole(["govt"]))):
     return {
         "policy_count": totals["policy_count"],
         "comment_count": totals["comment_count"],
-        "analysis_status": "pending_sentiment_script"
+        "analysis_status": "completed",
+        "overall_sentiment": totals.get("overall_sentiment", "Neutral")
     }
 
 @router.get("/{policy_id}", response_model=PostResponse)
@@ -81,9 +82,11 @@ async def delete_post(policy_id: str, user: dict = Depends(RequireRole(["admin",
 
 @router.get("/{policy_id}/sentiment")
 async def policy_sentiment(policy_id: str, user: dict = Depends(RequireRole(["govt"]))):
-    pid, count = await service_get_policy_sentiment(policy_id, user["email"])
+    pid, count, analysis = await service_get_policy_sentiment(policy_id, user["email"])
     return {
         "policy_id": pid,
         "comment_count": count,
-        "analysis_status": "pending_sentiment_script"
+        "analysis_status": "completed",
+        "analysis": analysis
     }
+

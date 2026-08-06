@@ -23,10 +23,13 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      - ML_SERVICE_URL=http://ml-service:8001
     env_file:
       - ./backend/.env
     depends_on:
       - mongodb
+      - ml-service
     deploy:
       resources:
         limits:
@@ -46,6 +49,19 @@ services:
       resources:
         limits:
           memory: 256M
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: smart-gov-ml-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
 volumes:
   mongodb_data:

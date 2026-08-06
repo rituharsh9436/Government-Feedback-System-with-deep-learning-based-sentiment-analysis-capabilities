@@ -115,6 +115,9 @@ async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="Policy not found or not owned by you")
 
+import httpx
+from config import settings
+
 async def get_policy_sentiment(policy_id: str, user_email: str):
     post = await db_connection.db["posts"].find_one({
         "_id": parse_policy_id(policy_id),
@@ -122,17 +125,66 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
     })
     if not post:
         raise HTTPException(status_code=404, detail="Your policy was not found")
-    return str(post["_id"]), len(post.get("comments", []))
+        
+    comments = post.get("comments", [])
+    texts = [c.get("content") for c in comments if c.get("content")]
+    
+    analysis_result = {"results": [], "overall_sentiment": "Neutral"}
+    if texts:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{settings.ML_SERVICE_URL}/analyze",
+                    json={"texts": texts},
+                    timeout=30.0
+                )
+                if response.status_code == 200:
+                    analysis_result = response.json()
+        except Exception as e:
+            print(f"ML Service Error: {e}")
+            analysis_result["overall_sentiment"] = "Error connecting to ML service"
+
+    return str(post["_id"]), len(comments), analysis_result
 
 async def get_overall_sentiment(user_email: str):
     pipeline = [
         {"$match": {"author_email": user_email}},
-        {"$project": {"comment_count": {"$size": {"$ifNull": ["$comments", []]}}}},
-        {"$group": {
-            "_id": None,
-            "policy_count": {"$sum": 1},
-            "comment_count": {"$sum": "$comment_count"}
-        }}
+        {"$project": {"comments": 1}}
     ]
-    data = [item async for item in db_connection.db["posts"].aggregate(pipeline)]
-    return data[0] if data else {"policy_count": 0, "comment_count": 0}
+    
+    all_texts = []
+    policy_count = 0
+    comment_count = 0
+    
+    async for post in db_connection.db["posts"].aggregate(pipeline):
+        policy_count += 1
+        comments = post.get("comments", [])
+        comment_count += len(comments)
+        for c in comments:
+            if c.get("content"):
+                all_texts.append(c.get("content"))
+                
+    # Limit texts to avoid overwhelming the model on a huge dashboard load
+    all_texts = all_texts[:100]
+    
+    analysis_result = {"results": [], "overall_sentiment": "Neutral"}
+    if all_texts:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{settings.ML_SERVICE_URL}/analyze",
+                    json={"texts": all_texts},
+                    timeout=60.0
+                )
+                if response.status_code == 200:
+                    analysis_result = response.json()
+        except Exception as e:
+            print(f"ML Service Error: {e}")
+            analysis_result["overall_sentiment"] = "Error connecting to ML service"
+
+    return {
+        "policy_count": policy_count,
+        "comment_count": comment_count,
+        "overall_sentiment": analysis_result["overall_sentiment"]
+    }
+
