@@ -5,12 +5,13 @@
 This project is structured as a full-stack modern web application:
 - **Frontend**: React, TailwindCSS, React Query, React Router (Served via Nginx in production).
 - **Backend**: FastAPI, Motor (async MongoDB driver), Pydantic.
-- **Database**: MongoDB 6.0.
-- **Deployment**: Fully dockerized with `docker-compose`.
+- **Database**: Centralized MongoDB (e.g., MongoDB Atlas).
+- **Deployment**: Fully dockerized with `docker-compose`, designed for ML service auto-scaling.
 
 ## Prerequisites
 - Docker and Docker Compose installed on your host server.
 - Domain name pointing to your server IP (optional but recommended for SSL).
+- A central MongoDB database (e.g., MongoDB Atlas cluster).
 - SMTP/httpx credentials (e.g., Brevo) for OTP emails.
 
 ## Environment Variables Configuration
@@ -22,7 +23,7 @@ Before deploying, you MUST configure the environment variables securely. Do NOT 
    cp backend/.env.example backend/.env
    ```
    Edit `backend/.env` and set secure values:
-   - `MONGO_URL`: Connection string (e.g., `mongodb://mongodb:27017` for the docker-compose setup).
+   - `MONGO_URL`: Connection string to your central database (e.g., `mongodb+srv://user:pass@cluster0.mongodb.net/auth_db`).
    - `SECRET_KEY`: Generate a secure random string (e.g., `openssl rand -hex 32`).
    - `CORS_ORIGINS`: Add your production domains (e.g., `["https://yourdomain.com"]`).
    - `BREVO_USER` & `BREVO_API_KEY`: Your Brevo credentials.
@@ -46,9 +47,15 @@ To build the images and run the containers in detached mode:
 docker-compose up -d --build
 ```
 
+If you anticipate high usage and want to scale the ML sentiment analysis service, you can run multiple instances:
+
+```bash
+docker-compose up -d --build --scale ml-service=3
+```
+
 ### 2. Verify Services
 
-Check that all three containers (`smart-gov-mongodb`, `smart-gov-backend`, `smart-gov-frontend`) are running:
+Check that your containers (`smart-gov-backend`, `smart-gov-frontend`, `smart-gov-ml-service`) are running:
 
 ```bash
 docker-compose ps
