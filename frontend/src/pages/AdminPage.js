@@ -71,10 +71,16 @@ export const AdminPage = () => {
                       </p>
                     </div>
                   </div>
-                  <Button disabled={isProcessing} onClick={() => approve(user.id)} className="shrink-0">
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Approve Request
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" disabled={isProcessing} onClick={() => handleDelete(user)} className="text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200">
+                      <UserX className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                    <Button disabled={isProcessing} onClick={() => approve(user.id)}>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Approve Request
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

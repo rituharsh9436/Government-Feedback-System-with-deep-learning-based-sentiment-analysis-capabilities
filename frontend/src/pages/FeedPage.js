@@ -99,7 +99,7 @@ export const FeedPage = () => {
         </section>
       )}
 
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sticky top-[72px] z-30">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sticky top-[72px] z-30 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -137,6 +137,39 @@ export const FeedPage = () => {
               <span className="text-sm font-medium text-slate-700">7 Days</span>
             </label>
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-slate-100 pt-4">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <span className="text-sm font-medium text-slate-500">Date Range:</span>
+            <input 
+              type="date" 
+              className="h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              value={filters.dateFrom}
+              onChange={(e) => handleFilterChange({ dateFrom: e.target.value })}
+              disabled={filters.recent}
+              title={filters.recent ? "Disable '7 Days' filter to select custom dates" : "Start Date"}
+            />
+            <span className="text-sm text-slate-400">to</span>
+            <input 
+              type="date" 
+              className="h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              value={filters.dateTo}
+              onChange={(e) => handleFilterChange({ dateTo: e.target.value })}
+              disabled={filters.recent}
+              title={filters.recent ? "Disable '7 Days' filter to select custom dates" : "End Date"}
+            />
+          </div>
+          {(filters.dateFrom || filters.dateTo) && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleFilterChange({ dateFrom: '', dateTo: '' })}
+              className="text-slate-500 hover:text-slate-800"
+            >
+              Clear Dates
+            </Button>
+          )}
         </div>
       </section>
 

@@ -11,7 +11,7 @@ This project is structured as a full-stack modern web application:
 ## Prerequisites
 - Docker and Docker Compose installed on your host server.
 - Domain name pointing to your server IP (optional but recommended for SSL).
-- SMTP credentials (e.g., Brevo) for OTP emails.
+- SMTP/httpx credentials (e.g., Brevo) for OTP emails.
 
 ## Environment Variables Configuration
 
@@ -25,7 +25,7 @@ Before deploying, you MUST configure the environment variables securely. Do NOT 
    - `MONGO_URL`: Connection string (e.g., `mongodb://mongodb:27017` for the docker-compose setup).
    - `SECRET_KEY`: Generate a secure random string (e.g., `openssl rand -hex 32`).
    - `CORS_ORIGINS`: Add your production domains (e.g., `["https://yourdomain.com"]`).
-   - `BREVO_SMTP_USER` & `BREVO_SMTP_PASSWORD`: Your SMTP credentials.
+   - `BREVO_USER` & `BREVO_API_KEY`: Your Brevo credentials.
 
 2. Create the frontend `.env` file from the example:
    ```bash
