@@ -1,4 +1,4 @@
-# Smart Government Feedback System - Production Deployment
+# Government Feedback System with deep learning based sentiment analysis capabilities - Production Deployment
 
 ## Architecture Overview
 
