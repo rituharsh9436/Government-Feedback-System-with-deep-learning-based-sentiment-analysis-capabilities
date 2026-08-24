@@ -53,12 +53,8 @@ async def get_all_posts(
 @router.get("/analytics/overall-sentiment")
 async def overall_sentiment(user: dict = Depends(RequireRole(["govt"]))):
     totals = await service_get_overall_sentiment(user["email"])
-    return {
-        "policy_count": totals["policy_count"],
-        "comment_count": totals["comment_count"],
-        "analysis_status": "completed",
-        "overall_sentiment": totals.get("overall_sentiment", "Neutral")
-    }
+    totals["analysis_status"] = "completed"
+    return totals
 
 @router.get("/{policy_id}", response_model=PostResponse)
 async def get_post(policy_id: str):

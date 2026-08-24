@@ -11,6 +11,7 @@ __pycache__/
 .venv/
 venv/
 env/
+seed_comments.py
 
 # ==============================
 # Environment variables (IMPORTANT)
