@@ -122,3 +122,8 @@ def ready_check():
     if sentiment_pipeline:
         return {"status": "ready"}
     raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded")
+
+if __name__ == "__main__":
+    import uvicorn
+    # Hugging Face Spaces (Gradio SDK) routes external traffic to port 7860
+    uvicorn.run(app, host="0.0.0.0", port=7860)
