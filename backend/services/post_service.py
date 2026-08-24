@@ -179,10 +179,19 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
     return str(post["_id"]), len(comments), analysis_result
 
 async def get_overall_sentiment(user_email: str):
-    pipeline = [
-        {"$match": {"author_email": user_email}},
-        {"$project": {"comments": 1, "category": 1}}
-    ]
+    user = await db_connection.db["users"].find_one({"email": user_email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    department_name = user.get("department_name")
+    
+    pipeline = []
+    if department_name != "Central":
+        department_users = await db_connection.db["users"].find({"department_name": department_name}).to_list(length=None)
+        department_emails = [u["email"] for u in department_users]
+        pipeline.append({"$match": {"author_email": {"$in": department_emails}}})
+        
+    pipeline.append({"$project": {"comments": 1, "category": 1}})
     
     policy_count = 0
     comment_count = 0

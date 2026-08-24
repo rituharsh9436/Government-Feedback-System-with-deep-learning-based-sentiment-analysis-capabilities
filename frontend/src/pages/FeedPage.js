@@ -59,7 +59,11 @@ export const FeedPage = () => {
           {showOverallAnalysis && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                <h3 className="text-sm font-semibold text-slate-700">Platform Analytics</h3>
+                <h3 className="text-sm font-semibold text-slate-700">
+                  {user?.department_name === 'Central' 
+                    ? 'Overall Analysis — All Departments' 
+                    : `Overall Analysis — ${user?.department_name || 'Department'}`}
+                </h3>
               </div>
               <div className="p-6">
                 {isAnalysisLoading ? (
