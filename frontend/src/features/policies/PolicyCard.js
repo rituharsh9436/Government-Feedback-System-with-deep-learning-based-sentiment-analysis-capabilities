@@ -12,6 +12,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [visibleCommentsCount, setVisibleCommentsCount] = useState(3);
   
   const { mutate: deletePolicy, isPending: isDeleting } = useDeletePolicy();
   const { mutate: addComment, isPending: isCommenting } = useAddComment();
@@ -171,8 +172,8 @@ export const PolicyCard = ({ policy, onRepost }) => {
           Public replies ({policy.comments?.length || 0})
         </h3>
         
-        <div className="space-y-4 mb-5">
-          {policy.comments?.map((c, index) => (
+        <div className="space-y-4 mb-4">
+          {policy.comments?.slice(0, visibleCommentsCount)?.map((c, index) => (
             <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -190,6 +191,25 @@ export const PolicyCard = ({ policy, onRepost }) => {
               <p className="text-slate-700 text-sm ml-8 leading-relaxed">{c.content}</p>
             </div>
           ))}
+        </div>
+
+        <div className="flex gap-4 ml-8 mb-5">
+          {policy.comments?.length > visibleCommentsCount && (
+            <button
+              onClick={() => setVisibleCommentsCount(prev => prev + 6)}
+              className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
+            >
+              View {Math.min(6, policy.comments.length - visibleCommentsCount)} more {Math.min(6, policy.comments.length - visibleCommentsCount) === 1 ? 'reply' : 'replies'}
+            </button>
+          )}
+          {visibleCommentsCount > 3 && (
+            <button
+              onClick={() => setVisibleCommentsCount(3)}
+              className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
+            >
+              Show fewer replies
+            </button>
+          )}
         </div>
 
         {user?.role === 'public' && (
