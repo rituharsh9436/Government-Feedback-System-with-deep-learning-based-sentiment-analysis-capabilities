@@ -6,7 +6,7 @@ import { Badge } from '../../components/common/Badge';
 import { Input } from '../../components/common/Input';
 import toast from 'react-hot-toast';
 import { MapPin, Calendar, Trash2, Repeat, Activity, MessageSquare } from 'lucide-react';
-import { SentimentDistributionChart } from '../../components/charts/SentimentDistributionChart';
+
 
 export const PolicyCard = ({ policy, onRepost }) => {
   const { user } = useAuth();
@@ -15,12 +15,13 @@ export const PolicyCard = ({ policy, onRepost }) => {
   
   const { mutate: deletePolicy, isPending: isDeleting } = useDeletePolicy();
   const { mutate: addComment, isPending: isCommenting } = useAddComment();
-  const { data: analysis, isLoading: isAnalysisLoading } = usePolicyAnalysis(showAnalysis ? policy._id : null);
+  const { data: analysis, isLoading: isAnalysisLoading } = usePolicyAnalysis(showAnalysis ? (policy.id || policy._id) : null);
 
   const isGovernment = user?.role === 'govt';
   const isAdmin = user?.role === 'admin';
   const ownsPolicy = isGovernment && policy.author_email === user?.email;
   const canDelete = isAdmin || ownsPolicy;
+  const canViewAnalysis = isGovernment && (user?.department_name === 'Central' || user?.department_name?.toLowerCase() === policy.category?.toLowerCase());
 
   const handleDelete = () => {
     toast((t) => (
@@ -91,7 +92,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
           <p className="whitespace-pre-wrap">{policy.description}</p>
         </div>
         
-        {ownsPolicy && (
+        {canViewAnalysis && (
           <div className="mt-6 pt-6 border-t border-slate-100">
             {!showAnalysis ? (
               <Button variant="secondary" size="sm" onClick={() => setShowAnalysis(true)} className="flex items-center gap-2">
@@ -129,13 +130,31 @@ export const PolicyCard = ({ policy, onRepost }) => {
                         <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis_status}</p>
                       </div>
                     </div>
-                    <div className="bg-white border border-slate-100 rounded shadow-sm p-4 h-48">
-                      <SentimentDistributionChart data={[
-                        { name: 'Positive', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'POSITIVE').length || 0 },
-                        { name: 'Negative', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'NEGATIVE').length || 0 },
-                        { name: 'Neutral', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() !== 'POSITIVE' && r.label.toUpperCase() !== 'NEGATIVE').length || 0 }
-                      ]} />
-                    </div>
+                    {(() => {
+                      const posCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'POSITIVE').length || 0;
+                      const negCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'NEGATIVE').length || 0;
+                      const neuCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() !== 'POSITIVE' && r.label.toUpperCase() !== 'NEGATIVE').length || 0;
+                      const total = posCount + negCount + neuCount || 1;
+                      const posPct = (posCount / total) * 100;
+                      const negPct = (negCount / total) * 100;
+                      const neuPct = (neuCount / total) * 100;
+
+                      return (
+                        <div className="bg-white border border-slate-100 rounded shadow-sm p-5">
+                          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-4 tracking-wider">Sentiment Breakdown</h4>
+                          <div className="w-full h-3 flex rounded-full overflow-hidden bg-slate-100">
+                            {posPct > 0 && <div style={{ width: `${posPct}%` }} className="bg-emerald-500 transition-all duration-500" title={`Positive: ${posCount}`} />}
+                            {neuPct > 0 && <div style={{ width: `${neuPct}%` }} className="bg-slate-400 transition-all duration-500" title={`Neutral: ${neuCount}`} />}
+                            {negPct > 0 && <div style={{ width: `${negPct}%` }} className="bg-red-500 transition-all duration-500" title={`Negative: ${negCount}`} />}
+                          </div>
+                          <div className="flex justify-between items-center mt-4 text-sm font-medium text-slate-600">
+                            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Positive ({posCount})</span>
+                            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Neutral ({neuCount})</span>
+                            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Negative ({negCount})</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">Failed to load analysis.</p>
@@ -155,11 +174,18 @@ export const PolicyCard = ({ policy, onRepost }) => {
         <div className="space-y-4 mb-5">
           {policy.comments?.map((c, index) => (
             <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                  {c.author_email.charAt(0).toUpperCase()}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                    {c.author_email.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="font-medium text-sm text-slate-900">{c.author_email}</p>
                 </div>
-                <p className="font-medium text-sm text-slate-900">{c.author_email}</p>
+                {showAnalysis && c.sentiment && (
+                  <Badge variant={c.sentiment.toUpperCase() === 'POSITIVE' ? 'success' : c.sentiment.toUpperCase() === 'NEGATIVE' ? 'destructive' : 'default'} className="capitalize">
+                    {c.sentiment.toLowerCase()}
+                  </Badge>
+                )}
               </div>
               <p className="text-slate-700 text-sm ml-8 leading-relaxed">{c.content}</p>
             </div>

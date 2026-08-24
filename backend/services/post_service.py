@@ -142,12 +142,19 @@ async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
         raise HTTPException(status_code=404, detail="Policy not found or not owned by you")
 
 async def get_policy_sentiment(policy_id: str, user_email: str):
-    post = await db_connection.db["posts"].find_one({
-        "_id": parse_policy_id(policy_id),
-        "author_email": user_email
-    })
+    user = await db_connection.db["users"].find_one({"email": user_email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    post = await db_connection.db["posts"].find_one({"_id": parse_policy_id(policy_id)})
     if not post:
-        raise HTTPException(status_code=404, detail="Your policy was not found")
+        raise HTTPException(status_code=404, detail="Policy not found")
+        
+    department_name = user.get("department_name")
+    
+    # Allow if Central, or same department
+    if department_name != "Central" and str(department_name).lower() != str(post.get("category")).lower():
+        raise HTTPException(status_code=403, detail="You do not have permission to view analysis for this department")
         
     comments = post.get("comments", [])
     
