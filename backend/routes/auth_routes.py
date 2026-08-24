@@ -132,9 +132,9 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
     csrf_token = generate_csrf_token()
 
     # Set HttpOnly Cookies
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="lax", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="lax", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
-    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="lax") # Readable by JS for headers
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="none") # Readable by JS for headers
 
     await log_audit_action("login", user.email)
     return {"message": "Successfully logged in", "role": user.role.value}
@@ -164,8 +164,8 @@ async def refresh_token(request: Request, response: Response):
     access_token, _ = create_access_token(data={"sub": email, "role": role})
     new_refresh_token, _ = create_refresh_token(data={"sub": email, "role": role})
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="lax", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, secure=True, samesite="lax", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
     
     return {"message": "Tokens refreshed successfully"}
 
@@ -175,9 +175,9 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
     if jti:
         await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
         
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    response.delete_cookie("csrf_token")
+    response.delete_cookie(key="access_token", secure=True, samesite="none")
+    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
+    response.delete_cookie(key="csrf_token", secure=True, samesite="none")
     
     await log_audit_action("logout", current_user["email"])
     return {"message": "Successfully logged out"}
