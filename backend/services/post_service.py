@@ -187,9 +187,7 @@ async def get_overall_sentiment(user_email: str):
     
     pipeline = []
     if department_name != "Central":
-        department_users = await db_connection.db["users"].find({"department_name": department_name}).to_list(length=None)
-        department_emails = [u["email"] for u in department_users]
-        pipeline.append({"$match": {"author_email": {"$in": department_emails}}})
+        pipeline.append({"$match": {"category": department_name}})
         
     pipeline.append({"$project": {"comments": 1, "category": 1}})
     
