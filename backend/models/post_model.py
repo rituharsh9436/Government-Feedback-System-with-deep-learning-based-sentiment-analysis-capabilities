@@ -12,7 +12,6 @@ class PolicyComment(BaseModel):
 class Policy(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str
-    department: str  # e.g., Transport, Health, Finance
     description: str
     is_active: bool = True
     comments: List[PolicyComment] = Field(default_factory=list)

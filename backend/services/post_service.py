@@ -79,7 +79,7 @@ async def add_comment_to_post(policy_id: str, email: str, comment_data: dict) ->
     if comment_data.get("content"):
         try:
             async with httpx.AsyncClient() as client:
-                api_key = settings.ML_SERVICE_API_KEY if hasattr(settings, "ML_SERVICE_API_KEY") else ""
+                api_key = getattr(settings, "ML_SERVICE_API_KEY", None) or ""
                 response = await client.post(
                     f"{settings.ML_SERVICE_URL}/analyze",
                     json={"texts": [comment_data["content"]]},

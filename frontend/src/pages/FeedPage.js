@@ -280,7 +280,7 @@ export const FeedPage = () => {
               <Button 
                 variant="ghost" 
                 className="mt-4"
-                onClick={() => setFilters({ keyword: '', recent: false, sort: 'newest', page: 1, limit: 10 })}
+                onClick={() => setFilters(prev => ({ ...prev, keyword: '', recent: false, dateFrom: '', dateTo: '', sort: 'newest', page: 1, limit: 10 }))}
               >
                 Clear filters
               </Button>

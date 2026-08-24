@@ -158,6 +158,12 @@ async def refresh_token(request: Request, response: Response):
     email = payload.get("sub")
     role = payload.get("role")
     
+    user = await db_connection.db["users"].find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=401, detail="User account no longer exists")
+    if role == UserRole.GOVT.value and not user.get("is_approved", False):
+        raise HTTPException(status_code=403, detail="Government account approval revoked")
+    
     # Revoke old refresh token (Rotation)
     await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
 

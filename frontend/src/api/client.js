@@ -29,12 +29,18 @@ const getCookie = (name) => {
   return null;
 };
 
-const subscribeTokenRefresh = (cb) => {
-  refreshSubscribers.push(cb);
+const subscribeTokenRefresh = (resolve, reject) => {
+  refreshSubscribers.push({ resolve, reject });
 };
 
-const onRefreshed = () => {
-  refreshSubscribers.forEach((cb) => cb());
+const onRefreshed = (error = null) => {
+  refreshSubscribers.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
+  });
   refreshSubscribers = [];
 };
 
@@ -57,17 +63,23 @@ export async function request(path, options = {}) {
     if (!isRefreshing) {
       isRefreshing = true;
       try {
-        await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+        const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+        if (!refreshRes.ok) throw new Error('Refresh failed');
         isRefreshing = false;
         onRefreshed();
       } catch (e) {
         isRefreshing = false;
+        onRefreshed(new ApiError('Session expired', 401));
         throw new ApiError('Session expired', 401);
       }
     }
 
     // Wait for the refresh to complete, then retry the original request
-    await new Promise((resolve) => subscribeTokenRefresh(resolve));
+    try {
+      await new Promise((resolve, reject) => subscribeTokenRefresh(resolve, reject));
+    } catch (e) {
+      throw e;
+    }
     
     // Retry with the same options. The browser will automatically send the new cookies.
     response = await fetch(`${API_URL}${path}`, {
