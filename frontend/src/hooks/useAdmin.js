@@ -1,18 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../api/client';
 import toast from 'react-hot-toast';
+import { useState } from 'react';
 
 export const useAdmin = () => {
   const queryClient = useQueryClient();
+  const [reqPage, setReqPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
 
-  const { data: requests, isLoading: isRequestsLoading } = useQuery({
-    queryKey: ['government-requests'],
-    queryFn: () => request('/auth/government-requests?page=1&limit=100'),
+  const { data: requestsData, isLoading: isRequestsLoading } = useQuery({
+    queryKey: ['government-requests', reqPage],
+    queryFn: () => request(`/auth/government-requests?page=${reqPage}&limit=10`),
   });
 
-  const { data: users, isLoading: isUsersLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => request('/auth/users?page=1&limit=100'),
+  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+    queryKey: ['users', usersPage],
+    queryFn: () => request(`/auth/users?page=${usersPage}&limit=10`),
   });
 
   const approveMutation = useMutation({
@@ -32,6 +35,7 @@ export const useAdmin = () => {
     onSuccess: () => {
       toast.success('User deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['government-requests'] });
     },
     onError: (error) => {
       toast.error(error.message || 'Error deleting user');
@@ -39,8 +43,14 @@ export const useAdmin = () => {
   });
 
   return {
-    requests: requests?.items || [],
-    users: users?.items || [],
+    requests: requestsData?.items || [],
+    requestsTotal: requestsData?.total || 0,
+    reqPage,
+    setReqPage,
+    users: usersData?.items || [],
+    usersTotal: usersData?.total || 0,
+    usersPage,
+    setUsersPage,
     isLoading: isRequestsLoading || isUsersLoading,
     approve: approveMutation.mutate,
     isApproving: approveMutation.isPending,

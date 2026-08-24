@@ -76,7 +76,9 @@ async def verify_otp(request: Request, verify_data: OTPVerify):
     email = str(verify_data.email)
     pending_record = await db_connection.db["pending_users"].find_one({"email": email})
 
-    if not pending_record:
+    if not pending_record or pending_record.get("expires_at", datetime.utcnow()) < datetime.utcnow():
+        if pending_record:
+            await db_connection.db["pending_users"].delete_one({"email": email})
         raise HTTPException(status_code=400, detail="No pending signup found or OTP expired. Please request a new OTP.")
 
     if not verify_password(verify_data.otp, pending_record["hashed_otp"]):
@@ -134,7 +136,7 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
     # Set HttpOnly Cookies
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
-    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="none") # Readable by JS for headers
+    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400) # Readable by JS for headers
 
     await log_audit_action("login", user.email)
     return {"message": "Successfully logged in", "role": user.role.value}

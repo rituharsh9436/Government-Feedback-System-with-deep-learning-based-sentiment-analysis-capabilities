@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2 } from 'lucide-react';
 
 export const AdminPage = () => {
-  const { requests, users, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const { requests, requestsTotal, reqPage, setReqPage, users, usersTotal, usersPage, setUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
 
   const handleDelete = (user) => {
@@ -85,6 +85,13 @@ export const AdminPage = () => {
               ))}
             </ul>
           )}
+          {requestsTotal > 10 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
+              <Button variant="outline" size="sm" onClick={() => setReqPage(p => Math.max(1, p - 1))} disabled={reqPage === 1 || isProcessing}>Previous</Button>
+              <span className="text-sm text-slate-500">Page {reqPage} of {Math.ceil(requestsTotal / 10)}</span>
+              <Button variant="outline" size="sm" onClick={() => setReqPage(p => p + 1)} disabled={reqPage >= Math.ceil(requestsTotal / 10) || isProcessing}>Next</Button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -128,6 +135,13 @@ export const AdminPage = () => {
               </li>
             ))}
           </ul>
+          {usersTotal > 10 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
+              <Button variant="outline" size="sm" onClick={() => setUsersPage(p => Math.max(1, p - 1))} disabled={usersPage === 1 || isProcessing}>Previous</Button>
+              <span className="text-sm text-slate-500">Page {usersPage} of {Math.ceil(usersTotal / 10)}</span>
+              <Button variant="outline" size="sm" onClick={() => setUsersPage(p => p + 1)} disabled={usersPage >= Math.ceil(usersTotal / 10) || isProcessing}>Next</Button>
+            </div>
+          )}
         </div>
       </section>
     </div>

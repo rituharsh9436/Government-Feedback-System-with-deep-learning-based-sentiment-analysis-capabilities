@@ -17,8 +17,8 @@ export const policiesAPI = {
     }
     if (filters.keyword?.trim()) params.set('keyword', filters.keyword.trim());
     if (filters.recent) params.set('recent', 'true');
-    if (filters.dateFrom) params.set('date_from', `${filters.dateFrom}T00:00:00`);
-    if (filters.dateTo) params.set('date_to', `${filters.dateTo}T23:59:59`);
+    if (filters.dateFrom) params.set('date_from', `${filters.dateFrom}T00:00:00Z`);
+    if (filters.dateTo) params.set('date_to', `${filters.dateTo}T23:59:59Z`);
     
     return request(`/posts/?${params}`);
   },

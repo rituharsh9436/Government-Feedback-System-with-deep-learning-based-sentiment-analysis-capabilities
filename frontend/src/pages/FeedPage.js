@@ -208,53 +208,65 @@ export const FeedPage = () => {
                         <p className="text-lg font-bold text-slate-800 capitalize mt-1">{overallAnalysis.overall_sentiment || 'Neutral'}</p>
                       </div>
                       <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                        <span className="text-sm font-medium text-slate-500">Status</span>
-                        <p className="text-lg font-bold text-slate-800 capitalize mt-1">Active</p>
+                        <span className="text-sm font-medium text-slate-500">Analyzed Feedback</span>
+                        <p className="text-lg font-bold text-slate-800 capitalize mt-1">{overallAnalysis.analyzed_count || 0}</p>
                       </div>
                     </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div 
-                        className="space-y-3 cursor-pointer group"
-                        onClick={() => navigate('/analysis/sentiment-distribution')}
-                      >
-                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Sentiment Distribution</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
-                          <SentimentDistributionChart data={overallAnalysis.sentiment_distribution} />
-                        </div>
+                    {overallAnalysis.analyzed_count === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed">
+                        <BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
+                        <h3 className="text-lg font-medium text-slate-900">No Sentiment Analysis Data Available</h3>
+                        <p className="text-sm text-slate-500 mt-1 max-w-sm text-center">
+                          Waiting for the ML service to process feedback. Once public comments are analyzed for sentiment, charts will appear here.
+                        </p>
                       </div>
-                      
-                      <div 
-                        className="space-y-3 cursor-pointer group"
-                        onClick={() => navigate('/analysis/feedback-over-time')}
-                      >
-                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Feedback Over Time</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
-                          <FeedbackOverTimeChart data={overallAnalysis.feedback_over_time} />
-                        </div>
-                      </div>
+                    ) : (
+                      <>
+                        {/* Charts Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div 
+                            className="space-y-3 cursor-pointer group"
+                            onClick={() => navigate('/analysis/sentiment-distribution')}
+                          >
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Sentiment Distribution</h4>
+                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                              <SentimentDistributionChart data={overallAnalysis.sentiment_distribution} />
+                            </div>
+                          </div>
+                          
+                          <div 
+                            className="space-y-3 cursor-pointer group"
+                            onClick={() => navigate('/analysis/feedback-over-time')}
+                          >
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Feedback Over Time</h4>
+                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                              <FeedbackOverTimeChart data={overallAnalysis.feedback_over_time} />
+                            </div>
+                          </div>
 
-                      <div 
-                        className="space-y-3 cursor-pointer group"
-                        onClick={() => navigate('/analysis/category-comparison')}
-                      >
-                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Category Comparison</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
-                          <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
-                        </div>
-                      </div>
+                          <div 
+                            className="space-y-3 cursor-pointer group"
+                            onClick={() => navigate('/analysis/category-comparison')}
+                          >
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Category Comparison</h4>
+                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                              <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
+                            </div>
+                          </div>
 
-                      <div 
-                        className="space-y-3 cursor-pointer group"
-                        onClick={() => navigate('/analysis/sentiment-score')}
-                      >
-                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">ML Confidence (Sentiment Score)</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
-                          <SentimentScoreChart data={overallAnalysis.sentiment_scores} />
+                          <div 
+                            className="space-y-3 cursor-pointer group"
+                            onClick={() => navigate('/analysis/sentiment-score')}
+                          >
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">ML Confidence (Sentiment Score)</h4>
+                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                              <SentimentScoreChart data={overallAnalysis.sentiment_scores} />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
                 )
               )}
@@ -265,6 +277,18 @@ export const FeedPage = () => {
 
       {activeTab === 'view' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {isGovernment && (
+            <div className="flex justify-end mb-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab('analysis')}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Overall Feedback Analysis
+              </Button>
+            </div>
+          )}
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sticky top-[72px] z-30 space-y-4">
             <div className="flex flex-col gap-4">
               <div className="relative w-full">

@@ -185,29 +185,35 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
         
     comments = post.get("comments", [])
     
-    # Calculate overall sentiment from stored data
-    positive_count = sum(1 for c in comments if str(c.get("sentiment")).upper() == "POSITIVE")
-    negative_count = sum(1 for c in comments if str(c.get("sentiment")).upper() == "NEGATIVE")
+    # Calculate overall sentiment from stored data (only for analyzed comments)
+    analyzed_comments = [c for c in comments if c.get("sentiment")]
+    positive_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "POSITIVE")
+    negative_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEGATIVE")
+    neutral_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEUTRAL")
     
-    if positive_count > negative_count:
+    if not analyzed_comments:
+        overall = "No Analysis"
+    elif positive_count > negative_count and positive_count > neutral_count:
         overall = "Positive"
-    elif negative_count > positive_count:
+    elif negative_count > positive_count and negative_count > neutral_count:
         overall = "Negative"
+    elif neutral_count > positive_count and neutral_count > negative_count:
+        overall = "Neutral"
     else:
-        overall = "Mixed" if (positive_count > 0 or negative_count > 0) else "Neutral"
+        overall = "Mixed"
         
     results = []
-    for c in comments:
-        if c.get("sentiment"):
-            results.append({
-                "label": c.get("sentiment"),
-                "score": c.get("sentiment_score", 0),
-                "model_version": c.get("sentiment_model_version")
-            })
+    for c in analyzed_comments:
+        results.append({
+            "label": c.get("sentiment"),
+            "score": c.get("sentiment_score", 0),
+            "model_version": c.get("sentiment_model_version")
+        })
 
     analysis_result = {
         "results": results,
-        "overall_sentiment": overall
+        "overall_sentiment": overall,
+        "analyzed_count": len(analyzed_comments)
     }
 
     return str(post["_id"]), len(comments), analysis_result
@@ -231,6 +237,8 @@ async def get_overall_sentiment(user_email: str):
     negative_count = 0
     neutral_count = 0
     
+    analyzed_count = 0
+    
     feedback_by_date = {}
     feedback_by_category = {}
     sentiment_scores = []
@@ -245,16 +253,21 @@ async def get_overall_sentiment(user_email: str):
             feedback_by_category[category] = {"count": 0, "positive": 0, "negative": 0, "neutral": 0}
             
         for c in comments:
+            sentiment = c.get("sentiment")
+            if not sentiment:
+                continue
+                
+            analyzed_count += 1
             feedback_by_category[category]["count"] += 1
             
-            sentiment = str(c.get("sentiment")).upper()
-            if sentiment == "POSITIVE":
+            sentiment_upper = str(sentiment).upper()
+            if sentiment_upper == "POSITIVE":
                 positive_count += 1
                 feedback_by_category[category]["positive"] += 1
-            elif sentiment == "NEGATIVE":
+            elif sentiment_upper == "NEGATIVE":
                 negative_count += 1
                 feedback_by_category[category]["negative"] += 1
-            else:
+            elif sentiment_upper == "NEUTRAL":
                 neutral_count += 1
                 feedback_by_category[category]["neutral"] += 1
                 
@@ -278,12 +291,16 @@ async def get_overall_sentiment(user_email: str):
                 bin_val = round(score, 1)
                 sentiment_scores.append(bin_val)
                 
-    if positive_count > negative_count:
+    if analyzed_count == 0:
+        overall = "No Analysis"
+    elif positive_count > negative_count and positive_count > neutral_count:
         overall = "Positive"
-    elif negative_count > positive_count:
+    elif negative_count > positive_count and negative_count > neutral_count:
         overall = "Negative"
+    elif neutral_count > positive_count and neutral_count > negative_count:
+        overall = "Neutral"
     else:
-        overall = "Mixed" if (positive_count > 0 or negative_count > 0) else "Neutral"
+        overall = "Mixed"
 
     # Format feedback over time
     feedback_over_time = [{"date": k, "count": v} for k, v in sorted(feedback_by_date.items())]
@@ -317,5 +334,6 @@ async def get_overall_sentiment(user_email: str):
         ],
         "feedback_over_time": feedback_over_time,
         "category_comparison": category_comparison,
-        "sentiment_scores": formatted_scores
+        "sentiment_scores": formatted_scores,
+        "analyzed_count": analyzed_count
     }

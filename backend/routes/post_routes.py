@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 
+from database import db_connection
 from models.post_model import PolicyComment
 from schemas.post_schema import PostCreate, PostResponse, PostPaginatedResponse
 from services.dependencies import get_current_user, RequireRole
@@ -20,6 +21,11 @@ router = APIRouter(prefix="/posts", tags=["Policies"])
 
 @router.post("/", status_code=201)
 async def create_post(data: PostCreate, user: dict = Depends(RequireRole(["govt"]))):
+    user_record = await db_connection.db["users"].find_one({"email": user["email"]})
+    if not user_record or data.category.lower() != str(user_record.get("department_name")).lower():
+        if user_record and user_record.get("department_name") != "Central":
+            raise HTTPException(status_code=403, detail="Category must match your assigned department")
+
     post = data.model_dump()
     post.update({
         "author_email": user["email"],
