@@ -13,6 +13,9 @@ class CommentResponse(BaseModel):
     author_email: str
     author_role: str
     created_at: datetime
+    sentiment: Optional[str] = None
+    sentiment_score: Optional[float] = None
+    sentiment_model_version: Optional[str] = None
 
 class PostResponse(BaseModel):
     id: str

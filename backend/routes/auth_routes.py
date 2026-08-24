@@ -79,14 +79,15 @@ async def verify_otp(request: Request, verify_data: OTPVerify):
     if not pending_record:
         raise HTTPException(status_code=400, detail="No pending signup found or OTP expired. Please request a new OTP.")
 
-    if pending_record["attempts"] >= 5:
-        await db_connection.db["pending_users"].delete_one({"email": email})
-        raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
-
     if not verify_password(verify_data.otp, pending_record["hashed_otp"]):
+        new_attempts = pending_record["attempts"] + 1
+        if new_attempts >= 5:
+            await db_connection.db["pending_users"].delete_one({"email": email})
+            raise HTTPException(status_code=400, detail="Too many invalid attempts. Please request a new OTP.")
+            
         await db_connection.db["pending_users"].update_one(
             {"email": email},
-            {"$inc": {"attempts": 1}}
+            {"$set": {"attempts": new_attempts}}
         )
         raise HTTPException(status_code=400, detail="Invalid OTP")
 

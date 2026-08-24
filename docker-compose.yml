@@ -14,7 +14,13 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - ml-service
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -30,6 +36,11 @@ services:
     # Expose internally so backend can reach it, but allow scaling without host port conflicts
     expose:
       - "8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:

@@ -25,6 +25,10 @@ async def create_indexes():
             "expires_at", expireAfterSeconds=0
         )
         
+        # Indexes for posts
+        await db_connection.db["posts"].create_index("created_at")
+        await db_connection.db["posts"].create_index([("title", "text"), ("description", "text")])
+        
         app_logger.info("Database indexes created successfully.")
     except Exception as e:
         app_logger.error(f"Error creating database indexes: {e}")

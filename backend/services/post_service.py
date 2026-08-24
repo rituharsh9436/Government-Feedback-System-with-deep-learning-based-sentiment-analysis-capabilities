@@ -3,6 +3,9 @@ from typing import Literal, Optional, List
 from bson import ObjectId
 from fastapi import HTTPException
 from database import db_connection
+from services.logger_service import app_logger
+import httpx
+from config import settings
 
 def parse_policy_id(value: str) -> ObjectId:
     if not ObjectId.is_valid(value):
@@ -72,6 +75,29 @@ async def get_post_by_id(policy_id: str):
 async def add_comment_to_post(policy_id: str, email: str, comment_data: dict) -> int:
     object_id = parse_policy_id(policy_id)
     
+    # Analyze sentiment synchronously via ML service before inserting
+    if comment_data.get("content"):
+        try:
+            async with httpx.AsyncClient() as client:
+                api_key = settings.ML_SERVICE_API_KEY if hasattr(settings, "ML_SERVICE_API_KEY") else ""
+                response = await client.post(
+                    f"{settings.ML_SERVICE_URL}/analyze",
+                    json={"texts": [comment_data["content"]]},
+                    headers={"X-API-Key": api_key},
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    analysis_result = response.json()
+                    if analysis_result.get("results") and len(analysis_result["results"]) > 0:
+                        first_result = analysis_result["results"][0]
+                        comment_data["sentiment"] = first_result.get("label")
+                        comment_data["sentiment_score"] = first_result.get("score")
+                        comment_data["sentiment_model_version"] = first_result.get("model_version")
+        except Exception as e:
+            app_logger.error(f"ML Service Error in add_comment_to_post: {e}")
+            # Do not block comment creation if ML service is down
+            pass
+            
     # We want to allow a max of 3 comments per user per post atomically.
     query = {
         "_id": object_id,
@@ -115,9 +141,6 @@ async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="Policy not found or not owned by you")
 
-import httpx
-from config import settings
-
 async def get_policy_sentiment(policy_id: str, user_email: str):
     post = await db_connection.db["posts"].find_one({
         "_id": parse_policy_id(policy_id),
@@ -127,22 +150,31 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
         raise HTTPException(status_code=404, detail="Your policy was not found")
         
     comments = post.get("comments", [])
-    texts = [c.get("content") for c in comments if c.get("content")]
     
-    analysis_result = {"results": [], "overall_sentiment": "Neutral"}
-    if texts:
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{settings.ML_SERVICE_URL}/analyze",
-                    json={"texts": texts},
-                    timeout=30.0
-                )
-                if response.status_code == 200:
-                    analysis_result = response.json()
-        except Exception as e:
-            print(f"ML Service Error: {e}")
-            analysis_result["overall_sentiment"] = "Error connecting to ML service"
+    # Calculate overall sentiment from stored data
+    positive_count = sum(1 for c in comments if str(c.get("sentiment")).upper() == "POSITIVE")
+    negative_count = sum(1 for c in comments if str(c.get("sentiment")).upper() == "NEGATIVE")
+    
+    if positive_count > negative_count:
+        overall = "Positive"
+    elif negative_count > positive_count:
+        overall = "Negative"
+    else:
+        overall = "Mixed" if (positive_count > 0 or negative_count > 0) else "Neutral"
+        
+    results = []
+    for c in comments:
+        if c.get("sentiment"):
+            results.append({
+                "label": c.get("sentiment"),
+                "score": c.get("sentiment_score", 0),
+                "model_version": c.get("sentiment_model_version")
+            })
+
+    analysis_result = {
+        "results": results,
+        "overall_sentiment": overall
+    }
 
     return str(post["_id"]), len(comments), analysis_result
 
@@ -152,39 +184,31 @@ async def get_overall_sentiment(user_email: str):
         {"$project": {"comments": 1}}
     ]
     
-    all_texts = []
     policy_count = 0
     comment_count = 0
+    positive_count = 0
+    negative_count = 0
     
     async for post in db_connection.db["posts"].aggregate(pipeline):
         policy_count += 1
         comments = post.get("comments", [])
         comment_count += len(comments)
         for c in comments:
-            if c.get("content"):
-                all_texts.append(c.get("content"))
+            sentiment = str(c.get("sentiment")).upper()
+            if sentiment == "POSITIVE":
+                positive_count += 1
+            elif sentiment == "NEGATIVE":
+                negative_count += 1
                 
-    # Limit texts to avoid overwhelming the model on a huge dashboard load
-    all_texts = all_texts[:100]
-    
-    analysis_result = {"results": [], "overall_sentiment": "Neutral"}
-    if all_texts:
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{settings.ML_SERVICE_URL}/analyze",
-                    json={"texts": all_texts},
-                    timeout=60.0
-                )
-                if response.status_code == 200:
-                    analysis_result = response.json()
-        except Exception as e:
-            print(f"ML Service Error: {e}")
-            analysis_result["overall_sentiment"] = "Error connecting to ML service"
+    if positive_count > negative_count:
+        overall = "Positive"
+    elif negative_count > positive_count:
+        overall = "Negative"
+    else:
+        overall = "Mixed" if (positive_count > 0 or negative_count > 0) else "Neutral"
 
     return {
         "policy_count": policy_count,
         "comment_count": comment_count,
-        "overall_sentiment": analysis_result["overall_sentiment"]
+        "overall_sentiment": overall
     }
-

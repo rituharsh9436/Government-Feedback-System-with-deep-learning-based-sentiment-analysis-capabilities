@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000"]
     ML_SERVICE_URL: str = "http://localhost:8001"
+    ML_SERVICE_API_KEY: str | None = None
     
     BREVO_API_KEY: str | None = None
     MAIL_FROM_EMAIL: str | None = None

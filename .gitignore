@@ -14,7 +14,8 @@ todonext.md
 
 __pycache__
 __init__.py
-
+RawData/*
+project_audit_report.md
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
