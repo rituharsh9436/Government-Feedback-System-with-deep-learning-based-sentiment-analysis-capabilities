@@ -50,12 +50,15 @@ async def request_otp(request: Request, user_data: OTPRequest):
     # Calculate expiration (5 minutes)
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
+    existing_pending = await db_connection.db["pending_users"].find_one({"email": str(user_data.email)})
+    attempts = existing_pending["attempts"] if existing_pending else 0
+
     pending_user = {
         "email": str(user_data.email),
         "hashed_otp": hashed_otp,
         "user_data": user_data.model_dump(),
         "expires_at": expires_at,
-        "attempts": 0
+        "attempts": attempts
     }
 
     # Upsert the pending user
@@ -96,13 +99,24 @@ async def verify_otp(request: Request, verify_data: OTPVerify):
     # OTP is valid, create the user account
     user_data = pending_record["user_data"]
     requested_role = UserRole(user_data["role"])
+    
+    department_name = None
+    department_id = None
+    if requested_role == UserRole.GOVT:
+        department_id = user_data.get("department_id")
+        valid_department = await db_connection.db[settings.VALID_DEPARTMENT_IDS_COLLECTION].find_one(
+            {"department_id": department_id}
+        )
+        if not valid_department:
+            raise HTTPException(status_code=400, detail="Invalid department ID")
+        department_name = valid_department.get("department_name")
 
     new_user = {
         "full_name": user_data["full_name"],
         "email": email,
         "hashed_password": get_password_hash(user_data["password"]),
-        "department_name": user_data.get("department_name") if requested_role == UserRole.GOVT else None,
-        "department_id": user_data.get("department_id") if requested_role == UserRole.GOVT else None,
+        "department_name": department_name,
+        "department_id": department_id,
         "role": requested_role.value,
         "is_approved": requested_role == UserRole.PUBLIC,
     }
@@ -178,10 +192,18 @@ async def refresh_token(request: Request, response: Response):
     return {"message": "Tokens refreshed successfully"}
 
 @router.post("/logout")
-async def logout(response: Response, current_user: dict = Depends(get_current_user)):
+async def logout(request: Request, response: Response, current_user: dict = Depends(get_current_user)):
     jti = current_user.get("jti")
     if jti:
         await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
+        
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        payload = decode_token(refresh_token)
+        if payload and payload.get("type") == "refresh":
+            refresh_jti = payload.get("jti")
+            if refresh_jti:
+                await db_connection.db["token_blocklist"].insert_one({"jti": refresh_jti, "revoked_at": datetime.utcnow()})
         
     response.delete_cookie(key="access_token", secure=True, samesite="none")
     response.delete_cookie(key="refresh_token", secure=True, samesite="none")
@@ -241,7 +263,7 @@ async def update_password(request: Request, password_data: UserPasswordUpdate, c
 
 
 @router.delete("/me")
-async def delete_me(response: Response, current_user: dict = Depends(get_current_user)):
+async def delete_me(request: Request, response: Response, current_user: dict = Depends(get_current_user)):
     user = await db_connection.db["users"].find_one({"email": current_user["email"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -253,6 +275,14 @@ async def delete_me(response: Response, current_user: dict = Depends(get_current
     jti = current_user.get("jti")
     if jti:
         await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
+        
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        payload = decode_token(refresh_token)
+        if payload and payload.get("type") == "refresh":
+            refresh_jti = payload.get("jti")
+            if refresh_jti:
+                await db_connection.db["token_blocklist"].insert_one({"jti": refresh_jti, "revoked_at": datetime.utcnow()})
         
     response.delete_cookie(key="access_token", secure=True, samesite="none")
     response.delete_cookie(key="refresh_token", secure=True, samesite="none")

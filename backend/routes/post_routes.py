@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 
 from database import db_connection
 from models.post_model import PolicyComment
@@ -73,14 +73,19 @@ async def get_post(policy_id: str):
     return await get_post_by_id(policy_id)
 
 @router.post("/{policy_id}/comments", status_code=201)
-async def save_policy_comment(policy_id: str, comment: PolicyComment, user: dict = Depends(RequireRole(["public"]))):
+async def save_policy_comment(
+    policy_id: str, 
+    comment: PolicyComment, 
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(RequireRole(["public"]))
+):
     comment_data = {
         "content": comment.content,
         "author_email": user["email"],
         "author_role": "public",
         "created_at": datetime.utcnow()
     }
-    remaining = await add_comment_to_post(policy_id, user["email"], comment_data)
+    remaining = await add_comment_to_post(policy_id, user["email"], comment_data, background_tasks)
     return {"message": "Comment added successfully", "remaining_replies": remaining}
 
 @router.delete("/{policy_id}")

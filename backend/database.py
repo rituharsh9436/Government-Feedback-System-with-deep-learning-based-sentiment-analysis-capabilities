@@ -27,6 +27,7 @@ async def create_indexes():
         
         # Indexes for posts
         await db_connection.db["posts"].create_index("created_at")
+        await db_connection.db["posts"].create_index("category")
         await db_connection.db["posts"].create_index([("title", "text"), ("description", "text")])
         
         app_logger.info("Database indexes created successfully.")
