@@ -22,10 +22,13 @@ async def create_post(data: dict) -> str:
 
 async def get_posts(
     keyword: Optional[str] = None,
+    department: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     recent: bool = False,
-    sort: Literal["newest", "oldest", "most_replied"] = "newest",
+    sort_date: Optional[Literal["newest", "oldest"]] = "newest",
+    sort_name: Optional[Literal["asc", "desc"]] = None,
+    sort_popularity: Optional[Literal["most_replied", "least_replied"]] = None,
     page: int = 1,
     limit: int = 10
 ):
@@ -36,6 +39,10 @@ async def get_posts(
             {"description": {"$regex": keyword, "$options": "i"}},
             {"category": {"$regex": keyword, "$options": "i"}}
         ]
+    if department:
+        departments = [d.strip() for d in department.split(",") if d.strip()]
+        if departments:
+            query["category"] = {"$in": departments}
     if recent:
         query.setdefault("created_at", {})["$gte"] = datetime.utcnow() - timedelta(days=7)
     if date_from:
@@ -47,20 +54,40 @@ async def get_posts(
     total = await db_connection.db["posts"].count_documents(query)
 
     items = []
-    if sort == "most_replied":
-        # Add skip and limit to pipeline for pagination
+    
+    if sort_popularity:
+        sort_dict = {}
+        if sort_popularity == "most_replied":
+            sort_dict["comment_count"] = -1
+        else:
+            sort_dict["comment_count"] = 1
+            
+        if sort_name:
+            sort_dict["title"] = 1 if sort_name == "asc" else -1
+            
+        if sort_date:
+            sort_dict["created_at"] = -1 if sort_date == "newest" else 1
+            
         pipeline = [
             {"$match": query},
             {"$addFields": {"comment_count": {"$size": {"$ifNull": ["$comments", []]}}}},
-            {"$sort": {"comment_count": -1, "created_at": -1}},
+            {"$sort": sort_dict},
             {"$skip": skip},
             {"$limit": limit}
         ]
         async for post in db_connection.db["posts"].aggregate(pipeline):
             items.append(map_post_to_response(post))
     else:
-        direction = 1 if sort == "oldest" else -1
-        cursor = db_connection.db["posts"].find(query).sort("created_at", direction).skip(skip).limit(limit)
+        sort_list = []
+        if sort_name:
+            sort_list.append(("title", 1 if sort_name == "asc" else -1))
+        if sort_date:
+            sort_list.append(("created_at", -1 if sort_date == "newest" else 1))
+            
+        if not sort_list:
+            sort_list.append(("created_at", -1))
+
+        cursor = db_connection.db["posts"].find(query).sort(sort_list).skip(skip).limit(limit)
         async for post in cursor:
             items.append(map_post_to_response(post))
 

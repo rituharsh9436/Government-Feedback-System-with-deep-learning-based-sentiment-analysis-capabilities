@@ -12,6 +12,7 @@ import { FullPageLoader } from './components/common/FullPageLoader';
 const AuthPage = lazy(() => import('./pages/AuthPage').then(module => ({ default: module.AuthPage })));
 const FeedPage = lazy(() => import('./pages/FeedPage').then(module => ({ default: module.FeedPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
+const AnalysisChartPage = lazy(() => import('./pages/AnalysisChartPage').then(module => ({ default: module.AnalysisChartPage })));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -44,6 +45,12 @@ function App() {
                   <Route path="/admin" element={
                     <ProtectedRoute allowedRoles={['admin']}>
                       <AdminPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/analysis/:chartId" element={
+                    <ProtectedRoute allowedRoles={['govt']}>
+                      <AnalysisChartPage />
                     </ProtectedRoute>
                   } />
                   

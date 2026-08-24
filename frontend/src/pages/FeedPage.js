@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePolicies, useOverallAnalysis } from '../hooks/usePolicies';
 import { PolicyCard } from '../features/policies/PolicyCard';
@@ -11,9 +12,82 @@ import { FeedbackOverTimeChart } from '../components/charts/FeedbackOverTimeChar
 import { CategoryFeedbackChart } from '../components/charts/CategoryFeedbackChart';
 import { SentimentScoreChart } from '../components/charts/SentimentScoreChart';
 
+const DEPARTMENTS = ["Health", "Education", "Defense", "Transportation", "Central", "Finance", "Infrastructure"];
+
+const DepartmentFilter = ({ selected = [], onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleToggle = (dept) => {
+    if (dept === "") {
+      onChange([]);
+      setIsOpen(false);
+      return;
+    }
+    
+    if (selected.includes(dept)) {
+      onChange(selected.filter(d => d !== dept));
+    } else {
+      onChange([...selected, dept]);
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button 
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all hover:bg-slate-50"
+      >
+        <Filter className="absolute left-3 w-4 h-4 text-slate-400" />
+        <span className="truncate max-w-[120px]">
+          {selected.length === 0 ? "All Departments" : selected.join(', ')}
+        </span>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-50 py-1">
+          <label className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+            <input 
+              type="checkbox" 
+              className="mr-2"
+              checked={selected.length === 0}
+              onChange={() => handleToggle("")} 
+            />
+            All Departments
+          </label>
+          <div className="h-px bg-slate-100 my-1"></div>
+          {DEPARTMENTS.map(dept => (
+            <label key={dept} className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+              <input 
+                type="checkbox" 
+                className="mr-2"
+                checked={selected.includes(dept)}
+                onChange={() => handleToggle(dept)} 
+              />
+              {dept}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const FeedPage = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({ keyword: '', recent: false, sort: 'newest', dateFrom: '', dateTo: '', page: 1, limit: 10 });
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState({ keyword: '', department: [], sortName: '', sortPopularity: '', recent: false, sortDate: 'newest', dateFrom: '', dateTo: '', page: 1, limit: 10 });
   const debouncedFilters = useDebounce(filters, 400);
 
   const [repostSource, setRepostSource] = useState(null);
@@ -141,30 +215,42 @@ export const FeedPage = () => {
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-slate-700">Sentiment Distribution</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                      <div 
+                        className="space-y-3 cursor-pointer group"
+                        onClick={() => navigate('/analysis/sentiment-distribution')}
+                      >
+                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Sentiment Distribution</h4>
+                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
                           <SentimentDistributionChart data={overallAnalysis.sentiment_distribution} />
                         </div>
                       </div>
                       
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-slate-700">Feedback Over Time</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                      <div 
+                        className="space-y-3 cursor-pointer group"
+                        onClick={() => navigate('/analysis/feedback-over-time')}
+                      >
+                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Feedback Over Time</h4>
+                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
                           <FeedbackOverTimeChart data={overallAnalysis.feedback_over_time} />
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-slate-700">Category Comparison</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                      <div 
+                        className="space-y-3 cursor-pointer group"
+                        onClick={() => navigate('/analysis/category-comparison')}
+                      >
+                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Category Comparison</h4>
+                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
                           <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-slate-700">ML Confidence (Sentiment Score)</h4>
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                      <div 
+                        className="space-y-3 cursor-pointer group"
+                        onClick={() => navigate('/analysis/sentiment-score')}
+                      >
+                        <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">ML Confidence (Sentiment Score)</h4>
+                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
                           <SentimentScoreChart data={overallAnalysis.sentiment_scores} />
                         </div>
                       </div>
@@ -180,8 +266,8 @@ export const FeedPage = () => {
       {activeTab === 'view' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sticky top-[72px] z-30 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="relative flex-1 w-full">
+            <div className="flex flex-col gap-4">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
@@ -192,17 +278,44 @@ export const FeedPage = () => {
                 />
               </div>
               
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full flex-wrap">
+                <DepartmentFilter 
+                  selected={filters.department}
+                  onChange={(newDept) => handleFilterChange({ department: newDept })}
+                />
+
                 <div className="relative flex items-center">
-                  <Filter className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
                   <select 
-                    className="h-10 pl-9 pr-8 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer hover:bg-slate-50"
-                    value={filters.sort} 
-                    onChange={(e) => handleFilterChange({ sort: e.target.value })}
+                    className="h-10 pl-4 pr-8 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer hover:bg-slate-50"
+                    value={filters.sortDate} 
+                    onChange={(e) => handleFilterChange({ sortDate: e.target.value })}
                   >
                     <option value="newest">Newest first</option>
                     <option value="oldest">Oldest first</option>
+                  </select>
+                </div>
+                
+                <div className="relative flex items-center">
+                  <select 
+                    className="h-10 pl-4 pr-8 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer hover:bg-slate-50"
+                    value={filters.sortName} 
+                    onChange={(e) => handleFilterChange({ sortName: e.target.value })}
+                  >
+                    <option value="">Name (None)</option>
+                    <option value="asc">Name (A-Z)</option>
+                    <option value="desc">Name (Z-A)</option>
+                  </select>
+                </div>
+                
+                <div className="relative flex items-center">
+                  <select 
+                    className="h-10 pl-4 pr-8 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer hover:bg-slate-50"
+                    value={filters.sortPopularity} 
+                    onChange={(e) => handleFilterChange({ sortPopularity: e.target.value })}
+                  >
+                    <option value="">Popularity (None)</option>
                     <option value="most_replied">Most replied</option>
+                    <option value="least_replied">Least replied</option>
                   </select>
                 </div>
                 
@@ -319,7 +432,7 @@ export const FeedPage = () => {
                   <Button 
                     variant="ghost" 
                     className="mt-4"
-                    onClick={() => setFilters(prev => ({ ...prev, keyword: '', recent: false, dateFrom: '', dateTo: '', sort: 'newest', page: 1, limit: 10 }))}
+                    onClick={() => setFilters(prev => ({ ...prev, keyword: '', department: [], sortName: '', sortPopularity: '', recent: false, dateFrom: '', dateTo: '', sortDate: 'newest', page: 1, limit: 10 }))}
                   >
                     Clear filters
                   </Button>

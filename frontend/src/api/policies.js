@@ -5,7 +5,16 @@ export const policiesAPI = {
     const params = new URLSearchParams();
     if (filters.page) params.set('page', filters.page);
     if (filters.limit) params.set('limit', filters.limit);
-    if (filters.sort) params.set('sort', filters.sort);
+    if (filters.sortDate) params.set('sort_date', filters.sortDate);
+    if (filters.sortName) params.set('sort_name', filters.sortName);
+    if (filters.sortPopularity) params.set('sort_popularity', filters.sortPopularity);
+    if (filters.department) {
+      if (Array.isArray(filters.department)) {
+        if (filters.department.length > 0) params.set('department', filters.department.join(','));
+      } else {
+        params.set('department', filters.department);
+      }
+    }
     if (filters.keyword?.trim()) params.set('keyword', filters.keyword.trim());
     if (filters.recent) params.set('recent', 'true');
     if (filters.dateFrom) params.set('date_from', `${filters.dateFrom}T00:00:00`);

@@ -2,18 +2,20 @@ import { useState, useEffect } from 'react';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useCreatePolicy } from '../../hooks/usePolicies';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FileEdit, Info } from 'lucide-react';
 
 const EMPTY_POLICY = { title: '', description: '', category: '', location: '' };
 
 export const PolicyForm = ({ initialPolicy, onSuccess, onCancel }) => {
-  const [form, setForm] = useState(initialPolicy || EMPTY_POLICY);
+  const { user } = useAuth();
+  const [form, setForm] = useState(initialPolicy || { ...EMPTY_POLICY, category: user?.department_name || '' });
   const { mutate: createPolicy, isPending } = useCreatePolicy();
 
   useEffect(() => {
-    setForm(initialPolicy || EMPTY_POLICY);
-  }, [initialPolicy]);
+    setForm(initialPolicy || { ...EMPTY_POLICY, category: user?.department_name || '' });
+  }, [initialPolicy, user?.department_name]);
 
   const update = (field, value) => setForm(current => ({ ...current, [field]: value }));
 
@@ -60,6 +62,7 @@ export const PolicyForm = ({ initialPolicy, onSuccess, onCancel }) => {
           className="flex-1 md:max-w-xs"
           label="Category" 
           required 
+          disabled
           value={form.category} 
           onChange={(e) => update('category', e.target.value)} 
           placeholder="e.g. Transportation"

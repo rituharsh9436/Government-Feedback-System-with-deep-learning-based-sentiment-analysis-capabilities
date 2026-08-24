@@ -12,7 +12,9 @@ __pycache__/
 venv/
 env/
 seed_comments.py
-
+seed_massive_data.py
+seed_citizens.py
+check_central.py
 # ==============================
 # Environment variables (IMPORTANT)
 # ==============================

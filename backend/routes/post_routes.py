@@ -33,19 +33,25 @@ async def create_post(data: PostCreate, user: dict = Depends(RequireRole(["govt"
 @router.get("/", response_model=PostPaginatedResponse)
 async def get_all_posts(
     keyword: Optional[str] = None,
+    department: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     recent: bool = False,
-    sort: Literal["newest", "oldest", "most_replied"] = "newest",
+    sort_date: Optional[Literal["newest", "oldest"]] = "newest",
+    sort_name: Optional[Literal["asc", "desc"]] = None,
+    sort_popularity: Optional[Literal["most_replied", "least_replied"]] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100)
 ):
     return await get_posts(
         keyword=keyword,
+        department=department,
         date_from=date_from,
         date_to=date_to,
         recent=recent,
-        sort=sort,
+        sort_date=sort_date,
+        sort_name=sort_name,
+        sort_popularity=sort_popularity,
         page=page,
         limit=limit
     )
