@@ -40,4 +40,26 @@ export const authAPI = {
   getCurrentUser: async () => {
     return request('/auth/me');
   },
+
+  updateProfile: async (data) => {
+    return request('/auth/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  changePassword: async (data) => {
+    return request('/auth/me/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteAccount: async () => {
+    return request('/auth/me', {
+      method: 'DELETE',
+    });
+  },
 };

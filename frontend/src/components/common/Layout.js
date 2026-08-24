@@ -1,7 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../common/Button';
-import { LogOut, LayoutDashboard, User } from 'lucide-react';
+import { LogOut, LayoutDashboard, User, Settings } from 'lucide-react';
 
 export const Layout = () => {
   const { user, logout } = useAuth();
@@ -34,6 +34,14 @@ export const Layout = () => {
                 </Link>
               )}
               
+              <Link 
+                to="/settings" 
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Settings
+              </Link>
+
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 border border-slate-300">
                   <User className="w-4 h-4 text-slate-600" />

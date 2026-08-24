@@ -5,7 +5,7 @@ from typing import Optional
 from database import db_connection
 from config import settings
 from models.user_model import UserInDB, UserRole
-from schemas.user_schema import UserSignup, UserLogin, UserResponse, UserPaginatedResponse
+from schemas.user_schema import UserSignup, UserLogin, UserResponse, UserPaginatedResponse, UserUpdate, UserPasswordUpdate
 from schemas.otp_schema import OTPRequest, OTPVerify
 from services.auth_service import create_access_token, create_refresh_token, get_password_hash, verify_password, generate_csrf_token, decode_token
 from services.dependencies import get_current_user
@@ -197,6 +197,70 @@ async def me(current_user: dict = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return map_user_to_response(user)
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_me(update_data: UserUpdate, current_user: dict = Depends(get_current_user)):
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    
+    if not update_dict:
+        raise HTTPException(status_code=400, detail="No valid fields provided for update")
+        
+    result = await db_connection.db["users"].find_one_and_update(
+        {"email": current_user["email"]},
+        {"$set": update_dict},
+        return_document=True
+    )
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    await log_audit_action("update_profile", current_user["email"])
+    return map_user_to_response(result)
+
+
+@router.put("/me/password")
+@limiter.limit("5/minute")
+async def update_password(request: Request, password_data: UserPasswordUpdate, current_user: dict = Depends(get_current_user)):
+    user = await db_connection.db["users"].find_one({"email": current_user["email"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not verify_password(password_data.current_password, user["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+        
+    new_hashed_password = get_password_hash(password_data.new_password)
+    
+    await db_connection.db["users"].update_one(
+        {"email": current_user["email"]},
+        {"$set": {"hashed_password": new_hashed_password}}
+    )
+    
+    await log_audit_action("update_password", current_user["email"])
+    return {"message": "Password updated successfully"}
+
+
+@router.delete("/me")
+async def delete_me(response: Response, current_user: dict = Depends(get_current_user)):
+    user = await db_connection.db["users"].find_one({"email": current_user["email"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Delete the user
+    await db_connection.db["users"].delete_one({"email": current_user["email"]})
+    
+    # Revoke current token
+    jti = current_user.get("jti")
+    if jti:
+        await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
+        
+    response.delete_cookie(key="access_token", secure=True, samesite="none")
+    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
+    response.delete_cookie(key="csrf_token", secure=True, samesite="none")
+    
+    await log_audit_action("delete_account", current_user["email"])
+    return {"message": "Account deleted successfully"}
+
 
 
 @router.get("/government-requests", response_model=UserPaginatedResponse)
