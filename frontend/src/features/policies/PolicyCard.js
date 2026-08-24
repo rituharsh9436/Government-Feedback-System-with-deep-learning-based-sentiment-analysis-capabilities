@@ -6,6 +6,7 @@ import { Badge } from '../../components/common/Badge';
 import { Input } from '../../components/common/Input';
 import toast from 'react-hot-toast';
 import { MapPin, Calendar, Trash2, Repeat, Activity, MessageSquare } from 'lucide-react';
+import { SentimentDistributionChart } from '../../components/charts/SentimentDistributionChart';
 
 export const PolicyCard = ({ policy, onRepost }) => {
   const { user } = useAuth();
@@ -113,14 +114,27 @@ export const PolicyCard = ({ policy, onRepost }) => {
                     <div className="h-4 bg-slate-200 rounded w-1/4"></div>
                   </div>
                 ) : analysis ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Replies Analyzed</span>
-                      <p className="text-lg font-bold text-slate-900 mt-1">{analysis.comment_count}</p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                        <span className="text-xs text-slate-500 uppercase font-semibold">Replies Analyzed</span>
+                        <p className="text-lg font-bold text-slate-900 mt-1">{analysis.comment_count}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                        <span className="text-xs text-slate-500 uppercase font-semibold">Overall</span>
+                        <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis?.overall_sentiment || 'Neutral'}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
+                        <span className="text-xs text-slate-500 uppercase font-semibold">Status</span>
+                        <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis_status}</p>
+                      </div>
                     </div>
-                    <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
-                      <span className="text-xs text-slate-500 uppercase font-semibold">Status</span>
-                      <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis_status}</p>
+                    <div className="bg-white border border-slate-100 rounded shadow-sm p-4 h-48">
+                      <SentimentDistributionChart data={[
+                        { name: 'Positive', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'POSITIVE').length || 0 },
+                        { name: 'Negative', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'NEGATIVE').length || 0 },
+                        { name: 'Neutral', value: analysis.analysis?.results?.filter(r => r.label.toUpperCase() !== 'POSITIVE' && r.label.toUpperCase() !== 'NEGATIVE').length || 0 }
+                      ]} />
                     </div>
                   </div>
                 ) : (

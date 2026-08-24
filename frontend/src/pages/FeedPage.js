@@ -6,7 +6,10 @@ import { PolicyForm } from '../features/policies/PolicyForm';
 import { Button } from '../components/common/Button';
 import { useDebounce } from '../hooks/useDebounce';
 import { Search, Filter, CalendarClock, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
-
+import { SentimentDistributionChart } from '../components/charts/SentimentDistributionChart';
+import { FeedbackOverTimeChart } from '../components/charts/FeedbackOverTimeChart';
+import { CategoryFeedbackChart } from '../components/charts/CategoryFeedbackChart';
+import { SentimentScoreChart } from '../components/charts/SentimentScoreChart';
 export const FeedPage = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState({ keyword: '', recent: false, sort: 'newest', dateFrom: '', dateTo: '', page: 1, limit: 10 });
@@ -71,18 +74,56 @@ export const FeedPage = () => {
                   </div>
                 ) : (
                   overallAnalysis && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="flex flex-col">
-                        <span className="text-3xl font-bold text-primary-600">{overallAnalysis.policy_count}</span>
-                        <span className="text-sm font-medium text-slate-500 mt-1">Total Policies</span>
+                    <div className="space-y-8">
+                      {/* KPI Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                          <span className="text-sm font-medium text-slate-500">Total Policies</span>
+                          <p className="text-2xl font-bold text-primary-600 mt-1">{overallAnalysis.policy_count}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                          <span className="text-sm font-medium text-slate-500">Public Feedback</span>
+                          <p className="text-2xl font-bold text-primary-600 mt-1">{overallAnalysis.comment_count}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                          <span className="text-sm font-medium text-slate-500">Overall Sentiment</span>
+                          <p className="text-lg font-bold text-slate-800 capitalize mt-1">{overallAnalysis.overall_sentiment || 'Neutral'}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                          <span className="text-sm font-medium text-slate-500">Status</span>
+                          <p className="text-lg font-bold text-slate-800 capitalize mt-1">Active</p>
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-3xl font-bold text-primary-600">{overallAnalysis.comment_count}</span>
-                        <span className="text-sm font-medium text-slate-500 mt-1">Public Replies</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xl font-bold text-slate-800 capitalize mt-2">{overallAnalysis.analysis_status}</span>
-                        <span className="text-sm font-medium text-slate-500 mt-1">Analysis Status</span>
+
+                      {/* Charts Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-slate-700">Sentiment Distribution</h4>
+                          <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                            <SentimentDistributionChart data={overallAnalysis.sentiment_distribution} />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-slate-700">Feedback Over Time</h4>
+                          <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                            <FeedbackOverTimeChart data={overallAnalysis.feedback_over_time} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-slate-700">Category Comparison</h4>
+                          <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                            <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-slate-700">ML Confidence (Sentiment Score)</h4>
+                          <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64">
+                            <SentimentScoreChart data={overallAnalysis.sentiment_scores} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )

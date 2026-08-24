@@ -181,24 +181,61 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
 async def get_overall_sentiment(user_email: str):
     pipeline = [
         {"$match": {"author_email": user_email}},
-        {"$project": {"comments": 1}}
+        {"$project": {"comments": 1, "category": 1}}
     ]
     
     policy_count = 0
     comment_count = 0
     positive_count = 0
     negative_count = 0
+    neutral_count = 0
+    
+    feedback_by_date = {}
+    feedback_by_category = {}
+    sentiment_scores = []
     
     async for post in db_connection.db["posts"].aggregate(pipeline):
         policy_count += 1
         comments = post.get("comments", [])
         comment_count += len(comments)
+        category = post.get("category", "Uncategorized")
+        
+        if category not in feedback_by_category:
+            feedback_by_category[category] = {"count": 0, "positive": 0, "negative": 0, "neutral": 0}
+            
         for c in comments:
+            feedback_by_category[category]["count"] += 1
+            
             sentiment = str(c.get("sentiment")).upper()
             if sentiment == "POSITIVE":
                 positive_count += 1
+                feedback_by_category[category]["positive"] += 1
             elif sentiment == "NEGATIVE":
                 negative_count += 1
+                feedback_by_category[category]["negative"] += 1
+            else:
+                neutral_count += 1
+                feedback_by_category[category]["neutral"] += 1
+                
+            # Date aggregation
+            created_at = c.get("created_at")
+            if created_at:
+                if isinstance(created_at, str):
+                    try:
+                        parsed_date = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        date_str = parsed_date.strftime("%Y-%m-%d")
+                    except ValueError:
+                        date_str = created_at[:10]
+                else:
+                    date_str = created_at.strftime("%Y-%m-%d")
+                feedback_by_date[date_str] = feedback_by_date.get(date_str, 0) + 1
+                
+            # Score aggregation
+            score = c.get("sentiment_score")
+            if score is not None:
+                # Bin to nearest 0.1
+                bin_val = round(score, 1)
+                sentiment_scores.append(bin_val)
                 
     if positive_count > negative_count:
         overall = "Positive"
@@ -207,8 +244,37 @@ async def get_overall_sentiment(user_email: str):
     else:
         overall = "Mixed" if (positive_count > 0 or negative_count > 0) else "Neutral"
 
+    # Format feedback over time
+    feedback_over_time = [{"date": k, "count": v} for k, v in sorted(feedback_by_date.items())]
+    
+    # Format category comparison
+    category_comparison = []
+    for cat, data in feedback_by_category.items():
+        category_comparison.append({
+            "category": cat,
+            "count": data["count"],
+            "positive": data["positive"],
+            "negative": data["negative"],
+            "neutral": data["neutral"]
+        })
+        
+    # Format sentiment scores histogram
+    score_bins = {}
+    for s in sentiment_scores:
+        score_bins[s] = score_bins.get(s, 0) + 1
+    
+    formatted_scores = [{"score_bin": f"{k:.1f}", "count": v} for k, v in sorted(score_bins.items())]
+
     return {
         "policy_count": policy_count,
         "comment_count": comment_count,
-        "overall_sentiment": overall
+        "overall_sentiment": overall,
+        "sentiment_distribution": [
+            {"name": "Positive", "value": positive_count},
+            {"name": "Negative", "value": negative_count},
+            {"name": "Neutral", "value": neutral_count}
+        ],
+        "feedback_over_time": feedback_over_time,
+        "category_comparison": category_comparison,
+        "sentiment_scores": formatted_scores
     }
