@@ -1,21 +1,27 @@
-import client from './client';
+import { request } from './client';
+
+const buildQueryString = (params) => {
+  const query = new URLSearchParams();
+  if (params.department) query.set('department', params.department);
+  if (params.dateFrom) query.set('date_from', params.dateFrom);
+  if (params.dateTo) query.set('date_to', params.dateTo);
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : '';
+};
 
 export const getAdminAnalyticsOverview = async (params = {}) => {
-  const response = await client.get('/admin/analytics/overview', { params });
-  return response.data;
+  return request(`/admin/analytics/overview${buildQueryString(params)}`);
 };
 
 export const getAdminAnalyticsTrends = async (params = {}) => {
-  const response = await client.get('/admin/analytics/trends', { params });
-  return response.data;
+  return request(`/admin/analytics/trends${buildQueryString(params)}`);
 };
 
 export const getAdminAnalyticsPolicies = async (params = {}) => {
-  const response = await client.get('/admin/analytics/policies', { params });
-  return response.data;
+  return request(`/admin/analytics/policies${buildQueryString(params)}`);
 };
 
 export const getAdminAnalyticsConfidence = async (params = {}) => {
-  const response = await client.get('/admin/analytics/confidence', { params });
-  return response.data;
+  return request(`/admin/analytics/confidence${buildQueryString(params)}`);
 };
+
