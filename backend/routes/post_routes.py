@@ -64,7 +64,7 @@ async def get_all_posts(
     )
 
 @router.get("/analytics/overall-sentiment")
-async def overall_sentiment(user: dict = Depends(RequireRole(["govt"]))):
+async def overall_sentiment(user: dict = Depends(RequireRole(["admin", "govt"]))):
     totals = await service_get_overall_sentiment(user["email"])
     totals["analysis_status"] = "completed"
     return totals
@@ -101,7 +101,7 @@ async def delete_post(policy_id: str, user: dict = Depends(RequireRole(["admin",
     return {"message": "Policy deleted"}
 
 @router.get("/{policy_id}/sentiment")
-async def policy_sentiment(policy_id: str, user: dict = Depends(RequireRole(["govt"]))):
+async def policy_sentiment(policy_id: str, user: dict = Depends(RequireRole(["admin", "govt"]))):
     pid, count, analysis = await service_get_policy_sentiment(policy_id, user["email"])
     return {
         "policy_id": pid,

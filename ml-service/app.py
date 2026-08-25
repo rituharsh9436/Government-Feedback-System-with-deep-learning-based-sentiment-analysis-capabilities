@@ -13,12 +13,25 @@ from contextlib import asynccontextmanager
 
 logger = logging.getLogger("uvicorn.error")
 
+def sanitize_env_var(key: str, val: Optional[str]) -> Optional[str]:
+    if not val:
+        return None
+    val = val.strip()
+    prefix = f"{key}="
+    if val.startswith(prefix):
+        val = val[len(prefix):].strip()
+    if val.startswith('"') and val.endswith('"'):
+        val = val[1:-1].strip()
+    elif val.startswith("'") and val.endswith("'"):
+        val = val[1:-1].strip()
+    return val if val else None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_id = os.getenv("MODEL_ID")
-    model_revision = os.getenv("MODEL_REVISION", "main")
-    model_subfolder = os.getenv("MODEL_SUBFOLDER")
-    hf_token = os.getenv("HF_TOKEN")
+    model_id = sanitize_env_var("MODEL_ID", os.getenv("MODEL_ID"))
+    model_revision = sanitize_env_var("MODEL_REVISION", os.getenv("MODEL_REVISION")) or "main"
+    model_subfolder = sanitize_env_var("MODEL_SUBFOLDER", os.getenv("MODEL_SUBFOLDER"))
+    hf_token = sanitize_env_var("HF_TOKEN", os.getenv("HF_TOKEN"))
     
     batch_task = None
     
@@ -26,11 +39,8 @@ async def lifespan(app: FastAPI):
         logger.warning("MODEL_ID environment variable not set. ML Service will not be able to process requests.")
     else:
         kwargs = {}
-        if model_revision:
-            kwargs["revision"] = model_revision
         if model_subfolder:
-            kwargs["model_kwargs"] = {"subfolder": model_subfolder}
-            kwargs["tokenizer_kwargs"] = {"subfolder": model_subfolder}
+            kwargs["subfolder"] = model_subfolder
         if hf_token:
             kwargs["token"] = hf_token
             
@@ -75,54 +85,47 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
 
 def _do_load_model(model_id, kwargs, model_revision):
     global sentiment_pipeline, model_version
-    logger.info(f"Loading model {model_id} (revision: {model_revision})...")
+    
+    subfolder = kwargs.get("subfolder")
+    token = kwargs.get("token")
+    
+    logger.info(f"Loading model {model_id} (revision: {model_revision}, subfolder: {subfolder})...")
     logger.info(f"Transformers version: {transformers.__version__}")
     
     try:
-        subfolder = kwargs.get("model_kwargs", {}).get("subfolder")
-        config_path = hf_hub_download(
-            repo_id=model_id,
-            filename="config.json",
-            subfolder=subfolder,
+        config_obj = AutoConfig.from_pretrained(
+            model_id,
             revision=model_revision,
-            token=kwargs.get("token")
+            subfolder=subfolder,
+            token=token
         )
-        logger.info(f"Downloaded config to: {config_path}")
-        
-        with open(config_path, "r", encoding="utf-8") as f:
-            config_dict = json.load(f)
-            
     except Exception as e:
-        logger.error(f"Failed to download or parse config.json for {model_id}: {e}")
-        raise ValueError(f"Could not retrieve valid config.json for {model_id}") from e
+        logger.error(f"Failed to download or parse config for {model_id} (revision: {model_revision}, subfolder: {subfolder}): {e}")
+        raise ValueError(f"Could not retrieve valid config for {model_id}") from e
         
-    model_type = config_dict.get("model_type")
-    architectures = config_dict.get("architectures", [])
+    model_type = getattr(config_obj, "model_type", None)
+    architectures = getattr(config_obj, "architectures", [])
     
     logger.info(f"Detected model_type: {model_type}")
     logger.info(f"Detected architectures: {architectures}")
     
     if not model_type:
-        raise ValueError(f"config.json is missing 'model_type'. Content keys: {list(config_dict.keys())}")
+        raise ValueError(f"config is missing 'model_type'.")
         
     try:
-        tokenizer_kwargs = kwargs.get("tokenizer_kwargs", {})
-        if "token" in kwargs:
-            tokenizer_kwargs["token"] = kwargs["token"]
-            
-        tokenizer = AutoTokenizer.from_pretrained(model_id, revision=model_revision, **tokenizer_kwargs)
-        
-        model_kwargs_dict = kwargs.get("model_kwargs", {})
-        if "token" in kwargs:
-            model_kwargs_dict["token"] = kwargs["token"]
-            
-        config_obj = AutoConfig.from_pretrained(config_path)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id, 
+            revision=model_revision, 
+            subfolder=subfolder,
+            token=token
+        )
         
         model = AutoModelForSequenceClassification.from_pretrained(
             model_id, 
             revision=model_revision, 
             config=config_obj,
-            **model_kwargs_dict
+            subfolder=subfolder,
+            token=token
         )
         
         pipe = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
