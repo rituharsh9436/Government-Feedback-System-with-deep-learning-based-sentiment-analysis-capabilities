@@ -6,7 +6,7 @@ const COLORS = {
   Neutral: '#94a3b8',  // slate-400
 };
 
-export const SentimentDistributionChart = ({ data }) => {
+const SentimentDistributionChart = ({ data }) => {
   // data should be [{ name: 'Positive', value: X }, ...]
   
   const hasData = data && data.some(d => d.value > 0);
@@ -46,3 +46,5 @@ export const SentimentDistributionChart = ({ data }) => {
     </div>
   );
 };
+
+export default SentimentDistributionChart;

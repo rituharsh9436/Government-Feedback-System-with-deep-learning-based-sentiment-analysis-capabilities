@@ -7,7 +7,7 @@ import { PolicyForm } from '../features/policies/PolicyForm';
 import { Button } from '../components/common/Button';
 import { useDebounce } from '../hooks/useDebounce';
 import { Search, Filter, CalendarClock, ChevronLeft, ChevronRight, FileText, BarChart3, List } from 'lucide-react';
-import { SentimentDistributionChart } from '../components/charts/SentimentDistributionChart';
+import SentimentDistributionChart from '../components/charts/SentimentDistributionChart';
 import { FeedbackOverTimeChart } from '../components/charts/FeedbackOverTimeChart';
 import { CategoryFeedbackChart } from '../components/charts/CategoryFeedbackChart';
 import { SentimentScoreChart } from '../components/charts/SentimentScoreChart';

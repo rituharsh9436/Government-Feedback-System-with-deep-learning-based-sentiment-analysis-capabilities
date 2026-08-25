@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOverallAnalysis } from '../hooks/usePolicies';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '../components/common/Button';
-import { SentimentDistributionChart } from '../components/charts/SentimentDistributionChart';
+import SentimentDistributionChart from '../components/charts/SentimentDistributionChart';
 import { FeedbackOverTimeChart } from '../components/charts/FeedbackOverTimeChart';
 import { CategoryFeedbackChart } from '../components/charts/CategoryFeedbackChart';
 import { SentimentScoreChart } from '../components/charts/SentimentScoreChart';

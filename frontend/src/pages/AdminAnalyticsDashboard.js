@@ -5,7 +5,7 @@ import {
   useAdminAnalyticsPolicies, 
   useAdminAnalyticsConfidence 
 } from '../hooks/useAdminAnalytics';
-import { SentimentDistributionChart } from '../components/charts/SentimentDistributionChart';
+import SentimentDistributionChart from '../components/charts/SentimentDistributionChart';
 import TrendLineChart from '../components/charts/TrendLineChart';
 import ConfidenceDistributionChart from '../components/charts/ConfidenceDistributionChart';
 
