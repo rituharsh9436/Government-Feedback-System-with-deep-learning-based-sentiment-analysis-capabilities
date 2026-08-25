@@ -134,7 +134,10 @@ def _do_load_model(model_id, kwargs, model_revision):
             token=token
         )
         
-        pipe = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+        model_max_length = getattr(tokenizer, "model_max_length", 512)
+        if model_max_length > 100000:
+            model_max_length = 512
+        pipe = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer, truncation=True, max_length=model_max_length)
         sentiment_pipeline = pipe
         model_version = f"{model_id}@{model_revision}"
         logger.info("Model loaded successfully.")
@@ -176,7 +179,20 @@ async def batch_processor():
                     predictions = []
             except Exception as e:
                 logger.error(f"Inference error in batch processor: {e}")
-                predictions = [{"error": str(e)}] * len(flat_texts)
+                predictions = []
+                # Fallback to per-item processing so one bad text doesn't poison the batch
+                for text in flat_texts:
+                    try:
+                        pred = await asyncio.to_thread(sentiment_pipeline, text)
+                        if isinstance(pred, list) and len(pred) > 0 and isinstance(pred[0], dict):
+                            predictions.append(pred[0])
+                        elif isinstance(pred, dict):
+                            predictions.append(pred)
+                        else:
+                            predictions.append({"error": "Unknown prediction format"})
+                    except Exception as ex:
+                        logger.error(f"Failed to process individual text: {ex}")
+                        predictions.append({"error": str(ex)})
                 
             # Distribute predictions back to futures
             idx = 0

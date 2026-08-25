@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import List, Optional
 from .user_model import PyObjectId
@@ -11,6 +11,13 @@ class PolicyComment(BaseModel):
     author_email: str = ""
     author_role: str = ""
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    @field_validator("content")
+    def validate_content(cls, v):
+        if not v or not str(v).strip():
+            raise ValueError("Comment content cannot be empty or just whitespace")
+        return v
+
 
 class Policy(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)

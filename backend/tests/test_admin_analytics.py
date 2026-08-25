@@ -11,7 +11,8 @@ async def mock_admin_user():
         "id": "admin_test",
         "email": "admin@test.com",
         "role": UserRole.ADMIN,
-        "full_name": "Admin Tester"
+        "full_name": "Admin Tester",
+        "department_name": "Central"
     }
 
 @pytest.fixture
@@ -21,6 +22,7 @@ async def mock_govt_user():
         "email": "govt@test.com",
         "role": UserRole.GOVT,
         "department_id": "DEP1",
+        "department_name": "Health",
         "full_name": "Govt Tester"
     }
 

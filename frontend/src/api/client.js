@@ -66,6 +66,9 @@ export async function request(path, options = {}) {
           }
         })
         .catch((e) => {
+          localStorage.removeItem('role');
+          localStorage.removeItem('csrf_token');
+          window.dispatchEvent(new Event('auth:unauthorized'));
           throw new ApiError('Session expired', 401);
         })
         .finally(() => {

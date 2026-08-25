@@ -32,6 +32,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
+    
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem('role');
+      localStorage.removeItem('csrf_token');
+    };
+    
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, [checkAuth]);
 
   const login = async (email, password) => {

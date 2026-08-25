@@ -46,7 +46,7 @@ async def get_current_user(request: Request):
         if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token validation failed")
 
-    return {"email": email, "role": role, "jti": jti}
+    return {"email": email, "role": role, "jti": jti, "department_name": user_record.get("department_name")}
 
 def RequireRole(allowed_roles: list[str]):
     def role_checker(user: dict = Depends(get_current_user)):

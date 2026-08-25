@@ -131,6 +131,12 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
                     analysis_result = response.json()
                     if analysis_result.get("results") and len(analysis_result["results"]) > 0:
                         first_result = analysis_result["results"][0]
+                        
+                        if "error" in first_result:
+                            app_logger.error(f"ML Service returned error in prediction: {first_result['error']}")
+                            # It's an internal error from ML, we can break and fail
+                            break
+                            
                         sentiment = first_result.get("label")
                         sentiment_score = first_result.get("score")
                         sentiment_model_version = first_result.get("model_version")
@@ -152,6 +158,8 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
                     # Client error, don't retry
                     app_logger.error(f"Client error from ML service: {response.status_code}")
                     break
+                else:
+                    app_logger.warning(f"ML service returned {response.status_code}")
         except (httpx.RequestError, httpx.TimeoutException) as e:
             app_logger.warning(f"ML Service connection error on attempt {attempt + 1}: {e}")
         except Exception as e:

@@ -98,7 +98,7 @@ async def test_feedback_limits_and_ml(monkeypatch):
     # Get a comment id
     post = await db_connection.db["posts"].find_one({"_id": ObjectId(post_id)})
     comments = await db_connection.db["comments"].find({"post_id": ObjectId(post_id)}).to_list(length=None)
-    c_id = comments[0].get("id")
+    c_id = str(comments[0]["_id"])
 
     # ML success
     class MockResponse:
@@ -114,7 +114,7 @@ async def test_feedback_limits_and_ml(monkeypatch):
     assert comments[0]["sentiment"] == "POSITIVE"
 
     # ML permanent failure (e.g. 500 always)
-    c_id2 = comments[1].get("id")
+    c_id2 = str(comments[1]["_id"])
     class MockResponse500:
         status_code = 500
     async def mock_post_fail(*args, **kwargs):

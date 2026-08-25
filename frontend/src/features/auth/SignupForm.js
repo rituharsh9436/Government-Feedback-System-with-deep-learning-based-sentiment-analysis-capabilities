@@ -34,8 +34,23 @@ export const SignupForm = ({ onToggleMode, onSuccess }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) return "Password must be at least 8 characters long";
+    if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+    if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+    if (!/\d/.test(password)) return "Password must contain at least one number";
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character";
+    return null;
+  };
+
   const handleRequestOtp = (e) => {
     e.preventDefault();
+    const pwdError = validatePassword(formData.password);
+    if (pwdError) {
+      toast.error(pwdError);
+      return;
+    }
+
     const payload = { ...formData };
     if (payload.role === 'public') {
       delete payload.department_name;

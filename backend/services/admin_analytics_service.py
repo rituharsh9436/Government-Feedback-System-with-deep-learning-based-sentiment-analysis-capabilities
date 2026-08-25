@@ -83,6 +83,10 @@ async def get_overview(department: Optional[str] = None, date_from: Optional[dat
         
         total_valid = pos + neg + neu
         
+        pos_pct = round((pos / total_valid * 100), 1) if total_valid > 0 else 0
+        neg_pct = round((neg / total_valid * 100), 1) if total_valid > 0 else 0
+        neu_pct = round(100.0 - pos_pct - neg_pct, 1) if total_valid > 0 else 0
+
         return {
             "total_feedback": total_feedback,
             "total_policies": total_policies,
@@ -91,9 +95,9 @@ async def get_overview(department: Optional[str] = None, date_from: Optional[dat
                 "positive": pos,
                 "negative": neg,
                 "neutral": neu,
-                "positive_percentage": round((pos / total_valid * 100), 1) if total_valid > 0 else 0,
-                "negative_percentage": round((neg / total_valid * 100), 1) if total_valid > 0 else 0,
-                "neutral_percentage": round((neu / total_valid * 100), 1) if total_valid > 0 else 0
+                "positive_percentage": pos_pct,
+                "negative_percentage": neg_pct,
+                "neutral_percentage": neu_pct
             }
         }
 
