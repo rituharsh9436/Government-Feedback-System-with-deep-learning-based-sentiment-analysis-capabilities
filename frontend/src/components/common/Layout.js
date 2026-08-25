@@ -1,7 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../common/Button';
-import { LogOut, LayoutDashboard, User, Settings, MessageSquare } from 'lucide-react';
+import { LogOut, LayoutDashboard, User, Settings, MessageSquare, LineChart } from 'lucide-react';
 
 export const Layout = () => {
   const { user, logout } = useAuth();
@@ -33,13 +33,22 @@ export const Layout = () => {
               </Link>
 
               {user.role === 'admin' && (
-                <Link 
-                  to="/admin" 
-                  className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
+                <>
+                  <Link 
+                    to="/admin" 
+                    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Admin
+                  </Link>
+                  <Link 
+                    to="/admin/analytics" 
+                    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                  >
+                    <LineChart className="w-4 h-4" />
+                    Analytics
+                  </Link>
+                </>
               )}
               
               <Link 
