@@ -2,9 +2,10 @@ import { useAdmin } from '../hooks/useAdmin';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import toast from 'react-hot-toast';
-import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2, Server, DatabaseZap } from 'lucide-react';
+import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2, Server, DatabaseZap, LineChart } from 'lucide-react';
 import { policiesAPI } from '../api/policies';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const AdminPage = () => {
   const { requests, requestsTotal, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPage, setPublicUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
@@ -12,6 +13,7 @@ export const AdminPage = () => {
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   const [userListTab, setUserListTab] = useState('govt');
+  const navigate = useNavigate();
 
   const availableTabs = [
     { id: 'users', label: 'User Management', icon: Users },
@@ -236,6 +238,19 @@ export const AdminPage = () => {
             <Button variant="outline" onClick={handleReanalyze} disabled={isReanalyzing || isProcessing} className="shrink-0">
               <DatabaseZap className={`w-4 h-4 mr-2 ${isReanalyzing ? 'animate-pulse' : ''}`} />
               {isReanalyzing ? 'Starting...' : 'Trigger Analysis'}
+            </Button>
+          </div>
+          
+          <hr className="my-6 border-slate-100" />
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold text-slate-900">Sentiment Analytics Dashboard</h4>
+              <p className="text-sm text-slate-500 mt-1">View comprehensive analysis of public sentiment across all departments and policies.</p>
+            </div>
+            <Button onClick={() => navigate('/admin/analytics')} className="shrink-0">
+              <LineChart className="w-4 h-4 mr-2" />
+              Open Dashboard
             </Button>
           </div>
         </div>

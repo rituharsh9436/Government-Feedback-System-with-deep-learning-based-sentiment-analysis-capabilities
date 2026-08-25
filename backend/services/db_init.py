@@ -104,6 +104,16 @@ async def setup_indexes():
                 "options": {"background": True, "name": "comments_post_id_author_email"}
             },
             {
+                "collection": "comments",
+                "keys": [("created_at", pymongo.DESCENDING), ("sentiment", pymongo.ASCENDING)],
+                "options": {"background": True, "name": "comments_created_at_sentiment"}
+            },
+            {
+                "collection": "comments",
+                "keys": [("sentiment_score", pymongo.DESCENDING)],
+                "options": {"background": True, "name": "comments_sentiment_score"}
+            },
+            {
                 "collection": "posts",
                 "keys": [("title", pymongo.TEXT), ("description", pymongo.TEXT), ("category", pymongo.TEXT), ("location", pymongo.TEXT)],
                 "options": {"background": True, "name": "posts_text_search"}

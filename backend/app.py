@@ -9,6 +9,7 @@ import time
 from database import connect_to_mongo, close_mongo_connection, db_connection
 from routes.auth_routes import router as auth_router
 from routes.post_routes import router as post_router
+from routes.admin_analytics_routes import router as admin_analytics_router
 from config import settings
 from rate_limiter import limiter
 from services.logger_service import app_logger
@@ -46,6 +47,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(post_router)
 app.include_router(auth_router)
+app.include_router(admin_analytics_router)
 
 START_TIME = time.time()
 
