@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useOverallAnalysis } from '../hooks/usePolicies';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '../components/common/Button';
@@ -11,6 +12,7 @@ import { SentimentScoreChart } from '../components/charts/SentimentScoreChart';
 export const AnalysisChartPage = () => {
   const { chartId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: overallAnalysis, isLoading } = useOverallAnalysis();
 
   const getChartConfig = () => {
@@ -31,8 +33,10 @@ export const AnalysisChartPage = () => {
         };
       case 'category-comparison':
         return {
-          title: 'Category Comparison',
-          description: 'Comparison of feedback volume and sentiment across different departments/categories.',
+          title: user?.department_name === 'Central' ? 'Category Comparison' : 'Policy Comparison',
+          description: user?.department_name === 'Central' 
+            ? 'Comparison of feedback volume and sentiment across different departments/categories.' 
+            : 'Comparison of feedback volume and sentiment across different policies.',
           component: CategoryFeedbackChart,
           dataKey: 'category_comparison'
         };

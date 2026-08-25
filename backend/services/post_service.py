@@ -286,6 +286,8 @@ async def get_overall_sentiment(user_email: str):
     if department_name != "Central":
         match_stage["post.category"] = department_name
 
+    category_group_id = "$post.category" if department_name == "Central" else "$post.title"
+
     pipeline = [
         {"$match": {"sentiment": {"$nin": ["pending", "failed"], "$exists": True}}},
         {"$lookup": {
@@ -314,7 +316,7 @@ async def get_overall_sentiment(user_email: str):
             ],
             "category_stats": [
                 {"$group": {
-                    "_id": "$post.category",
+                    "_id": category_group_id,
                     "count": {"$sum": 1},
                     "positive": {
                         "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "POSITIVE"]}, 1, 0]}

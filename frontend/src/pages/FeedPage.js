@@ -251,7 +251,9 @@ export const FeedPage = () => {
                             className="space-y-3 cursor-pointer group"
                             onClick={() => navigate('/analysis/category-comparison')}
                           >
-                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Category Comparison</h4>
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">
+                              {user?.department_name === 'Central' ? 'Category Comparison' : 'Policy Comparison'}
+                            </h4>
                             <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
                               <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
                             </div>
