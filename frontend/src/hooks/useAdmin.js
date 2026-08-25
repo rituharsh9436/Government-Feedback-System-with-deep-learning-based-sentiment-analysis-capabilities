@@ -6,16 +6,22 @@ import { useState } from 'react';
 export const useAdmin = () => {
   const queryClient = useQueryClient();
   const [reqPage, setReqPage] = useState(1);
-  const [usersPage, setUsersPage] = useState(1);
+  const [govtUsersPage, setGovtUsersPage] = useState(1);
+  const [publicUsersPage, setPublicUsersPage] = useState(1);
 
   const { data: requestsData, isLoading: isRequestsLoading } = useQuery({
     queryKey: ['government-requests', reqPage],
     queryFn: () => request(`/auth/government-requests?page=${reqPage}&limit=10`),
   });
 
-  const { data: usersData, isLoading: isUsersLoading } = useQuery({
-    queryKey: ['users', usersPage],
-    queryFn: () => request(`/auth/users?page=${usersPage}&limit=10`),
+  const { data: govtUsersData, isLoading: isGovtUsersLoading } = useQuery({
+    queryKey: ['users', 'govt', govtUsersPage],
+    queryFn: () => request(`/auth/users?role=govt&page=${govtUsersPage}&limit=10`),
+  });
+
+  const { data: publicUsersData, isLoading: isPublicUsersLoading } = useQuery({
+    queryKey: ['users', 'public', publicUsersPage],
+    queryFn: () => request(`/auth/users?role=public&page=${publicUsersPage}&limit=10`),
   });
 
   const approveMutation = useMutation({
@@ -47,11 +53,18 @@ export const useAdmin = () => {
     requestsTotal: requestsData?.total || 0,
     reqPage,
     setReqPage,
-    users: usersData?.items || [],
-    usersTotal: usersData?.total || 0,
-    usersPage,
-    setUsersPage,
-    isLoading: isRequestsLoading || isUsersLoading,
+    
+    govtUsers: govtUsersData?.items || [],
+    govtUsersTotal: govtUsersData?.total || 0,
+    govtUsersPage,
+    setGovtUsersPage,
+    
+    publicUsers: publicUsersData?.items || [],
+    publicUsersTotal: publicUsersData?.total || 0,
+    publicUsersPage,
+    setPublicUsersPage,
+    
+    isLoading: isRequestsLoading || isGovtUsersLoading || isPublicUsersLoading,
     approve: approveMutation.mutate,
     isApproving: approveMutation.isPending,
     deleteUser: deleteMutation.mutate,

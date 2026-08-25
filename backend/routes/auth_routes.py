@@ -339,12 +339,18 @@ async def list_government_requests(
 async def list_managed_users(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    role: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     require_admin(current_user)
     skip = (page - 1) * limit
     
-    query = {"role": {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}}
+    query = {}
+    if role and role in [UserRole.PUBLIC.value, UserRole.GOVT.value]:
+        query["role"] = role
+    else:
+        query["role"] = {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}
+        
     total = await db_connection.db["users"].count_documents(query)
     
     users = []

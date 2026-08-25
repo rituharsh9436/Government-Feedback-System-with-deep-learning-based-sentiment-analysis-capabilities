@@ -7,10 +7,11 @@ import { policiesAPI } from '../api/policies';
 import { useState } from 'react';
 
 export const AdminPage = () => {
-  const { requests, requestsTotal, reqPage, setReqPage, users, usersTotal, usersPage, setUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const { requests, requestsTotal, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPage, setPublicUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
+  const [userListTab, setUserListTab] = useState('govt');
 
   const availableTabs = [
     { id: 'users', label: 'User Management', icon: Users },
@@ -45,7 +46,13 @@ export const AdminPage = () => {
   };
 
   const pendingIds = new Set(requests.map(u => u.id));
-  const activeUsers = users.filter(u => !pendingIds.has(u.id));
+  const activeGovtUsers = govtUsers.filter(u => !pendingIds.has(u.id));
+  const activePublicUsers = publicUsers.filter(u => !pendingIds.has(u.id));
+  
+  const currentUsers = userListTab === 'govt' ? activeGovtUsers : activePublicUsers;
+  const currentTotal = userListTab === 'govt' ? govtUsersTotal : publicUsersTotal;
+  const currentPage = userListTab === 'govt' ? govtUsersPage : publicUsersPage;
+  const setPage = userListTab === 'govt' ? setGovtUsersPage : setPublicUsersPage;
 
   return (
     <div className="max-w-5xl mx-auto space-y-10">
@@ -141,12 +148,35 @@ export const AdminPage = () => {
             <Users className="w-5 h-5 text-primary-500" />
             Active Users
           </h3>
-          <Badge variant="primary">{activeUsers.length} Users</Badge>
+          <Badge variant="primary">{currentTotal} Accounts</Badge>
+        </div>
+
+        <div className="flex space-x-1 bg-slate-100/80 p-1 rounded-lg w-full max-w-sm">
+          <button
+            onClick={() => setUserListTab('govt')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              userListTab === 'govt'
+                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
+          >
+            Government
+          </button>
+          <button
+            onClick={() => setUserListTab('public')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              userListTab === 'public'
+                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
+          >
+            Public
+          </button>
         </div>
         
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <ul className="divide-y divide-slate-100">
-            {activeUsers.map((user) => (
+            {currentUsers.map((user) => (
               <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" key={user.id}>
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
@@ -175,11 +205,11 @@ export const AdminPage = () => {
               </li>
             ))}
           </ul>
-          {usersTotal > 10 && (
+          {currentTotal > 10 && (
             <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
-              <Button variant="outline" size="sm" onClick={() => setUsersPage(p => Math.max(1, p - 1))} disabled={usersPage === 1 || isProcessing}>Previous</Button>
-              <span className="text-sm text-slate-500">Page {usersPage} of {Math.ceil(usersTotal / 10)}</span>
-              <Button variant="outline" size="sm" onClick={() => setUsersPage(p => p + 1)} disabled={usersPage >= Math.ceil(usersTotal / 10) || isProcessing}>Next</Button>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isProcessing}>Previous</Button>
+              <span className="text-sm text-slate-500">Page {currentPage} of {Math.ceil(currentTotal / 10)}</span>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={currentPage >= Math.ceil(currentTotal / 10) || isProcessing}>Next</Button>
             </div>
           )}
         </div>
