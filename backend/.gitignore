@@ -11,16 +11,13 @@ __pycache__/
 .venv/
 venv/
 env/
-seed_comments.py
-seed_massive_data.py
-seed_citizens.py
-check_central.py
+
 # ==============================
 # Environment variables (IMPORTANT)
 # ==============================
 .env
 .env.*
-analyze_seeded_data.py
+
 # ==============================
 # Logs
 # ==============================

@@ -54,4 +54,8 @@ export const policiesAPI = {
   getOverallAnalysis: async () => {
     return request('/posts/analytics/overall-sentiment');
   },
+
+  reanalyzeComments: async () => {
+    return request('/posts/analytics/reanalyze', { method: 'POST' });
+  },
 };

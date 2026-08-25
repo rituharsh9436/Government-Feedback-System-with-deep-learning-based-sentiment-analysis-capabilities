@@ -2,11 +2,26 @@ import { useAdmin } from '../hooks/useAdmin';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import toast from 'react-hot-toast';
-import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2 } from 'lucide-react';
+import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2, Server, DatabaseZap } from 'lucide-react';
+import { policiesAPI } from '../api/policies';
+import { useState } from 'react';
 
 export const AdminPage = () => {
   const { requests, requestsTotal, reqPage, setReqPage, users, usersTotal, usersPage, setUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+
+  const handleReanalyze = async () => {
+    setIsReanalyzing(true);
+    try {
+      await policiesAPI.reanalyzeComments();
+      toast.success("Background re-analysis of existing comments started. Please check server logs for progress.", { duration: 5000 });
+    } catch (err) {
+      toast.error(err.message || "Failed to start re-analysis");
+    } finally {
+      setIsReanalyzing(false);
+    }
+  };
 
   const handleDelete = (user) => {
     toast((t) => (
@@ -142,6 +157,28 @@ export const AdminPage = () => {
               <Button variant="outline" size="sm" onClick={() => setUsersPage(p => p + 1)} disabled={usersPage >= Math.ceil(usersTotal / 10) || isProcessing}>Next</Button>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Server className="w-5 h-5 text-indigo-500" />
+            System Actions
+          </h3>
+        </div>
+        
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold text-slate-900">Re-Analyze Old Comments</h4>
+              <p className="text-sm text-slate-500 mt-1">Triggers a background task to process comments that were added before the ML service was active or failed analysis.</p>
+            </div>
+            <Button variant="outline" onClick={handleReanalyze} disabled={isReanalyzing || isProcessing} className="shrink-0">
+              <DatabaseZap className={`w-4 h-4 mr-2 ${isReanalyzing ? 'animate-pulse' : ''}`} />
+              {isReanalyzing ? 'Starting...' : 'Trigger Analysis'}
+            </Button>
+          </div>
         </div>
       </section>
     </div>

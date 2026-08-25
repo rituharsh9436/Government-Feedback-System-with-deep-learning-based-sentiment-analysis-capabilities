@@ -16,6 +16,10 @@ from services.post_service import (
     get_policy_sentiment as service_get_policy_sentiment,
     get_overall_sentiment as service_get_overall_sentiment
 )
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from scripts.analyze_existing_comments import analyze_comments as run_reanalyze_comments
 
 router = APIRouter(prefix="/posts", tags=["Policies"])
 
@@ -67,6 +71,11 @@ async def overall_sentiment(user: dict = Depends(RequireRole(["govt"]))):
     totals = await service_get_overall_sentiment(user["email"])
     totals["analysis_status"] = "completed"
     return totals
+
+@router.post("/analytics/reanalyze", status_code=202)
+async def trigger_reanalyze_comments(background_tasks: BackgroundTasks, user: dict = Depends(RequireRole(["admin"]))):
+    background_tasks.add_task(run_reanalyze_comments, standalone=False)
+    return {"message": "Re-analysis of existing comments started in the background."}
 
 @router.get("/{policy_id}", response_model=PostResponse)
 async def get_post(policy_id: str):
