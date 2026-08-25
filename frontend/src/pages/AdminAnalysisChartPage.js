@@ -123,7 +123,7 @@ const AdminAnalysisChartPage = () => {
             </div>
           </div>
         ) : config.data ? (
-          <div className="h-[600px] w-full mt-4">
+          <div className="h-[calc(100vh-250px)] min-h-[400px] w-full mt-4">
             <ChartComponent data={config.data} />
           </div>
         ) : (

@@ -86,7 +86,7 @@ export const AnalysisChartPage = () => {
             </div>
           </div>
         ) : overallAnalysis ? (
-          <div className="h-[600px] w-full mt-4">
+          <div className="h-[calc(100vh-250px)] min-h-[400px] w-full mt-4">
             <ChartComponent data={overallAnalysis[config.dataKey]} />
           </div>
         ) : (
