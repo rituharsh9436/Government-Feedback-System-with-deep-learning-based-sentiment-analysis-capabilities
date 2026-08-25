@@ -1,7 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../common/Button';
-import { LogOut, LayoutDashboard, User, Settings } from 'lucide-react';
+import { LogOut, LayoutDashboard, User, Settings, MessageSquare } from 'lucide-react';
 
 export const Layout = () => {
   const { user, logout } = useAuth();
@@ -24,6 +24,14 @@ export const Layout = () => {
           
           {user ? (
             <div className="flex items-center gap-6">
+              <Link 
+                to="/" 
+                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Policies & Comments
+              </Link>
+
               {user.role === 'admin' && (
                 <Link 
                   to="/admin" 
