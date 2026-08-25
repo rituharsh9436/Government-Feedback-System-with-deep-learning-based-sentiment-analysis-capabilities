@@ -10,6 +10,12 @@ export const AdminPage = () => {
   const { requests, requestsTotal, reqPage, setReqPage, users, usersTotal, usersPage, setUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [activeTab, setActiveTab] = useState('users');
+
+  const availableTabs = [
+    { id: 'users', label: 'User Management', icon: Users },
+    { id: 'actions', label: 'System Actions', icon: Server }
+  ];
 
   const handleReanalyze = async () => {
     setIsReanalyzing(true);
@@ -57,7 +63,26 @@ export const AdminPage = () => {
         </Button>
       </div>
 
-      <section className="space-y-4">
+      <div className="flex space-x-1 bg-slate-100/80 p-1 rounded-lg">
+        {availableTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              activeTab === tab.id
+                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'users' && (
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-amber-500" />
@@ -159,7 +184,11 @@ export const AdminPage = () => {
           )}
         </div>
       </section>
+      </div>
+      )}
 
+      {activeTab === 'actions' && (
+      <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
@@ -181,6 +210,8 @@ export const AdminPage = () => {
           </div>
         </div>
       </section>
+      </div>
+      )}
     </div>
   );
 };
