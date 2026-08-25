@@ -367,7 +367,7 @@ async def get_overall_sentiment(user_email: str):
             "score_stats": [
                 {"$match": {"sentiment_score": {"$exists": True, "$type": "number"}}},
                 {"$group": {
-                    "_id": {"$round": ["$sentiment_score", 1]},
+                    "_id": {"$divide": [{"$trunc": {"$multiply": ["$sentiment_score", 10]}}, 10]},
                     "count": {"$sum": 1}
                 }},
                 {"$project": {

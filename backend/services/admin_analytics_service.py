@@ -124,16 +124,17 @@ async def get_trends(department: Optional[str] = None, date_from: Optional[datet
         
         # Group by YYYY-MM-DD
         pipeline.extend([
-            {"$project": {
-                "created_at": 1,
-                "sentiment_upper": {"$toUpper": "$sentiment"}
-            }},
-            {"$match": {"sentiment_upper": {"$in": ["POSITIVE", "NEGATIVE", "NEUTRAL"]}}},
+            {"$match": {"sentiment": {"$nin": ["pending", "failed"], "$exists": True}}},
             {
                 "$group": {
                     "_id": {
-                        "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
-                        "sentiment": "$sentiment_upper"
+                        "date": {
+                            "$dateToString": {
+                                "format": "%Y-%m-%d",
+                                "date": {"$toDate": "$created_at"}
+                            }
+                        },
+                        "sentiment": {"$toUpper": "$sentiment"}
                     },
                     "count": {"$sum": 1}
                 }
@@ -237,7 +238,7 @@ async def get_confidence_distribution(department: Optional[str] = None, date_fro
             {"$match": {"sentiment_score": {"$exists": True, "$type": "number"}}},
             {
                 "$group": {
-                    "_id": {"$round": ["$sentiment_score", 1]},
+                    "_id": {"$divide": [{"$trunc": {"$multiply": ["$sentiment_score", 10]}}, 10]},
                     "count": {"$sum": 1}
                 }
             },
