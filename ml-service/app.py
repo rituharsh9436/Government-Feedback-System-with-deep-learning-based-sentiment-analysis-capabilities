@@ -79,9 +79,11 @@ def _do_load_model(model_id, kwargs, model_revision):
     logger.info(f"Transformers version: {transformers.__version__}")
     
     try:
+        subfolder = kwargs.get("model_kwargs", {}).get("subfolder")
         config_path = hf_hub_download(
             repo_id=model_id,
             filename="config.json",
+            subfolder=subfolder,
             revision=model_revision,
             token=kwargs.get("token")
         )
