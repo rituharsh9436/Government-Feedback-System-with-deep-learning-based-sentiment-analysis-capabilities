@@ -15,25 +15,35 @@ const AdminAnalyticsDashboard = () => {
 
   // Derive date bounds
   const getDates = () => {
-    if (dateRange === 'all') return { date_from: null, date_to: null };
+    if (dateRange === 'all') return { dateFrom: null, dateTo: null };
     const dateTo = new Date();
     const dateFrom = new Date();
     if (dateRange === '7d') dateFrom.setDate(dateFrom.getDate() - 7);
     if (dateRange === '30d') dateFrom.setDate(dateFrom.getDate() - 30);
     if (dateRange === '90d') dateFrom.setDate(dateFrom.getDate() - 90);
     return { 
-      date_from: dateFrom.toISOString(), 
-      date_to: dateTo.toISOString() 
+      dateFrom: dateFrom.toISOString(), 
+      dateTo: dateTo.toISOString() 
     };
   };
 
-  const { date_from, date_to } = getDates();
-  const params = { department: department || undefined, date_from, date_to };
+  const { dateFrom, dateTo } = getDates();
+  const params = { department: department || undefined, dateFrom, dateTo };
 
-  const { data: overview, isLoading: loadingOverview } = useAdminAnalyticsOverview(params);
-  const { data: trends, isLoading: loadingTrends } = useAdminAnalyticsTrends(params);
-  const { data: policies, isLoading: loadingPolicies } = useAdminAnalyticsPolicies(params);
-  const { data: confidence, isLoading: loadingConfidence } = useAdminAnalyticsConfidence(params);
+  const { data: overview, isLoading: loadingOverview, isError: errorOverview } = useAdminAnalyticsOverview(params);
+  const { data: trends, isLoading: loadingTrends, isError: errorTrends } = useAdminAnalyticsTrends(params);
+  const { data: policies, isLoading: loadingPolicies, isError: errorPolicies } = useAdminAnalyticsPolicies(params);
+  const { data: confidence, isLoading: loadingConfidence, isError: errorConfidence } = useAdminAnalyticsConfidence(params);
+
+  // Safe fallbacks to prevent runtime crashes
+  const safeOverview = overview || {
+    total_feedback: 0,
+    average_confidence: 0,
+    sentiment: { positive_percentage: 0, negative_percentage: 0, neutral_percentage: 0 }
+  };
+  const safeTrends = Array.isArray(trends) ? trends : [];
+  const safePolicies = Array.isArray(policies) ? policies : [];
+  const safeConfidence = Array.isArray(confidence) ? confidence : [];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -73,25 +83,25 @@ const AdminAnalyticsDashboard = () => {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Feedback</h3>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {loadingOverview ? '...' : overview?.total_feedback.toLocaleString()}
+              {errorOverview ? 'Error' : loadingOverview ? '...' : (safeOverview.total_feedback || 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Avg Confidence</h3>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {loadingOverview ? '...' : (overview?.average_confidence * 100).toFixed(0)}%
+              {errorOverview ? 'Error' : loadingOverview ? '...' : ((safeOverview.average_confidence || 0) * 100).toFixed(0) + '%'}
             </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Positive</h3>
             <p className="text-3xl font-bold text-green-600 mt-2">
-              {loadingOverview ? '...' : `${overview?.sentiment.positive_percentage}%`}
+              {errorOverview ? 'Error' : loadingOverview ? '...' : `${safeOverview.sentiment?.positive_percentage || 0}%`}
             </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Negative</h3>
             <p className="text-3xl font-bold text-red-600 mt-2">
-              {loadingOverview ? '...' : `${overview?.sentiment.negative_percentage}%`}
+              {errorOverview ? 'Error' : loadingOverview ? '...' : `${safeOverview.sentiment?.negative_percentage || 0}%`}
             </p>
           </div>
         </section>
@@ -100,21 +110,25 @@ const AdminAnalyticsDashboard = () => {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Distribution</h2>
-            {loadingOverview ? (
+            {errorOverview ? (
+              <div className="h-80 flex items-center justify-center text-red-500">Failed to load data</div>
+            ) : loadingOverview ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
               <div className="h-80">
-                <SentimentDistributionChart data={overview?.sentiment} />
+                <SentimentDistributionChart data={safeOverview.sentiment} />
               </div>
             )}
           </div>
           
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Trend</h2>
-            {loadingTrends ? (
+            {errorTrends ? (
+              <div className="h-80 flex items-center justify-center text-red-500">Failed to load trend data</div>
+            ) : loadingTrends ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
-              <TrendLineChart data={trends} />
+              <TrendLineChart data={safeTrends} />
             )}
           </div>
         </section>
@@ -124,18 +138,24 @@ const AdminAnalyticsDashboard = () => {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">ML Confidence Distribution</h2>
             <p className="text-sm text-gray-500 mb-6">Scores closer to 1.0 indicate high confidence in the prediction.</p>
-            {loadingConfidence ? (
+            {errorConfidence ? (
+              <div className="h-80 flex items-center justify-center text-red-500">Failed to load confidence data</div>
+            ) : loadingConfidence ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
-              <ConfidenceDistributionChart data={confidence} />
+              <ConfidenceDistributionChart data={safeConfidence} />
             )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h2>
             <div className="space-y-4">
-              {!loadingPolicies && policies && policies.filter(p => p.status === 'Mostly Negative').length > 0 ? (
-                policies.filter(p => p.status === 'Mostly Negative').slice(0, 3).map(policy => (
+              {errorPolicies ? (
+                <div className="text-red-500 text-center py-8">Failed to load alerts</div>
+              ) : loadingPolicies ? (
+                <div className="text-gray-400 text-center py-8">Loading alerts...</div>
+              ) : safePolicies.filter(p => p.status === 'Mostly Negative').length > 0 ? (
+                safePolicies.filter(p => p.status === 'Mostly Negative').slice(0, 3).map(policy => (
                   <div key={policy.id} className="p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
                     <span className="text-red-500 text-xl mt-1">⚠️</span>
                     <div>
@@ -155,7 +175,7 @@ const AdminAnalyticsDashboard = () => {
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Policy Sentiment Drill-down</h2>
-            <span className="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">{policies?.length || 0} Policies</span>
+            <span className="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">{safePolicies.length} Policies</span>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -170,12 +190,20 @@ const AdminAnalyticsDashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {loadingPolicies ? (
+                {errorPolicies ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-red-500">Failed to load policy data</td>
+                  </tr>
+                ) : loadingPolicies ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-12 text-center text-gray-500">Loading policy data...</td>
                   </tr>
+                ) : safePolicies.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">No policies found for this period.</td>
+                  </tr>
                 ) : (
-                  policies?.map((policy) => (
+                  safePolicies.map((policy) => (
                     <tr key={policy.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 max-w-xs truncate" title={policy.title}>
                         {policy.title}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   getAdminAnalyticsOverview,
   getAdminAnalyticsTrends,
@@ -10,7 +10,7 @@ export const useAdminAnalyticsOverview = (params) => {
   return useQuery({
     queryKey: ['adminAnalyticsOverview', params],
     queryFn: () => getAdminAnalyticsOverview(params),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -18,7 +18,7 @@ export const useAdminAnalyticsTrends = (params) => {
   return useQuery({
     queryKey: ['adminAnalyticsTrends', params],
     queryFn: () => getAdminAnalyticsTrends(params),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -26,7 +26,7 @@ export const useAdminAnalyticsPolicies = (params) => {
   return useQuery({
     queryKey: ['adminAnalyticsPolicies', params],
     queryFn: () => getAdminAnalyticsPolicies(params),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -34,6 +34,6 @@ export const useAdminAnalyticsConfidence = (params) => {
   return useQuery({
     queryKey: ['adminAnalyticsConfidence', params],
     queryFn: () => getAdminAnalyticsConfidence(params),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 };
