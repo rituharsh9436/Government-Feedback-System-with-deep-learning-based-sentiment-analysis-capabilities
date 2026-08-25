@@ -17,6 +17,8 @@ async def lifespan(app: FastAPI):
     model_subfolder = os.getenv("MODEL_SUBFOLDER")
     hf_token = os.getenv("HF_TOKEN")
     
+    batch_task = None
+    
     if not model_id:
         logger.warning("MODEL_ID environment variable not set. ML Service will not be able to process requests.")
     else:
@@ -29,14 +31,25 @@ async def lifespan(app: FastAPI):
         if hf_token:
             kwargs["token"] = hf_token
             
-        # Load model in a background thread to allow FastAPI to start serving health checks immediately
-        asyncio.create_task(asyncio.to_thread(_do_load_model, model_id, kwargs, model_revision))
-        
-        # Start the batch processor
-        asyncio.create_task(batch_processor())
-        
+        try:
+            # Load model synchronously in a background thread and wait for it
+            await asyncio.to_thread(_do_load_model, model_id, kwargs, model_revision)
+            
+            # Start the batch processor only after successful load
+            batch_task = asyncio.create_task(batch_processor())
+        except Exception as e:
+            logger.exception("Failed to initialize ML Service")
+            raise e
+            
     yield
-
+    
+    # Cleanup on shutdown
+    if batch_task:
+        batch_task.cancel()
+        try:
+            await batch_task
+        except asyncio.CancelledError:
+            pass
 app = FastAPI(title="ML Service", lifespan=lifespan)
 
 sentiment_pipeline = None
@@ -59,14 +72,11 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
 
 def _do_load_model(model_id, kwargs, model_revision):
     global sentiment_pipeline, model_version
-    try:
-        logger.info(f"Loading model {model_id} (revision: {model_revision})...")
-        pipe = pipeline("sentiment-analysis", model=model_id, tokenizer=model_id, **kwargs)
-        sentiment_pipeline = pipe
-        model_version = f"{model_id}@{model_revision}"
-        logger.info("Model loaded successfully.")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
+    logger.info(f"Loading model {model_id} (revision: {model_revision})...")
+    pipe = pipeline("sentiment-analysis", model=model_id, tokenizer=model_id, **kwargs)
+    sentiment_pipeline = pipe
+    model_version = f"{model_id}@{model_revision}"
+    logger.info("Model loaded successfully.")
 
 async def batch_processor():
     """Background task to pull from queue, batch texts, and run inference."""
