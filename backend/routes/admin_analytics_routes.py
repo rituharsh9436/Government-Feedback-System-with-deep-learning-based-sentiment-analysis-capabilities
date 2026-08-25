@@ -17,7 +17,7 @@ router = APIRouter(
 
 def get_effective_department(user: dict, requested_department: Optional[str]) -> Optional[str]:
     user_dept = user.get("department_name")
-    if user_dept == "Central":
+    if user_dept == "Central" or user.get('role') == "admin":
         return requested_department
     if requested_department and requested_department != user_dept:
         raise HTTPException(status_code=403, detail="You can only access analytics for your own department")
