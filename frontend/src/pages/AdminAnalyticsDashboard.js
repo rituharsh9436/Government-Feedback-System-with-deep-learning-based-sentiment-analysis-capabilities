@@ -39,11 +39,17 @@ const AdminAnalyticsDashboard = () => {
   const safeOverview = overview || {
     total_feedback: 0,
     average_confidence: 0,
-    sentiment: { positive_percentage: 0, negative_percentage: 0, neutral_percentage: 0 }
+    sentiment: { positive_percentage: 0, negative_percentage: 0, neutral_percentage: 0, positive: 0, negative: 0, neutral: 0 }
   };
   const safeTrends = Array.isArray(trends) ? trends : [];
   const safePolicies = Array.isArray(policies) ? policies : [];
   const safeConfidence = Array.isArray(confidence) ? confidence : [];
+
+  const sentimentChartData = [
+    { name: 'Positive', value: safeOverview.sentiment?.positive || 0 },
+    { name: 'Negative', value: safeOverview.sentiment?.negative || 0 },
+    { name: 'Neutral', value: safeOverview.sentiment?.neutral || 0 },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -116,7 +122,7 @@ const AdminAnalyticsDashboard = () => {
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
               <div className="h-80">
-                <SentimentDistributionChart data={safeOverview.sentiment} />
+                <SentimentDistributionChart data={sentimentChartData} />
               </div>
             )}
           </div>
