@@ -16,10 +16,7 @@ from services.post_service import (
     get_policy_sentiment as service_get_policy_sentiment,
     get_overall_sentiment as service_get_overall_sentiment
 )
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from scripts.analyze_existing_comments import analyze_comments as run_reanalyze_comments
+from services.analytics_service import analyze_comments as run_reanalyze_comments
 
 router = APIRouter(prefix="/posts", tags=["Policies"])
 
