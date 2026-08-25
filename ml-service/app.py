@@ -2,7 +2,10 @@ from fastapi import FastAPI, HTTPException, status, Security, Depends
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification, AutoConfig
+import transformers
+from huggingface_hub import hf_hub_download
+import json
 import os
 import logging
 import asyncio
@@ -73,10 +76,61 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
 def _do_load_model(model_id, kwargs, model_revision):
     global sentiment_pipeline, model_version
     logger.info(f"Loading model {model_id} (revision: {model_revision})...")
-    pipe = pipeline("sentiment-analysis", model=model_id, tokenizer=model_id, **kwargs)
-    sentiment_pipeline = pipe
-    model_version = f"{model_id}@{model_revision}"
-    logger.info("Model loaded successfully.")
+    logger.info(f"Transformers version: {transformers.__version__}")
+    
+    try:
+        config_path = hf_hub_download(
+            repo_id=model_id,
+            filename="config.json",
+            revision=model_revision,
+            token=kwargs.get("token")
+        )
+        logger.info(f"Downloaded config to: {config_path}")
+        
+        with open(config_path, "r", encoding="utf-8") as f:
+            config_dict = json.load(f)
+            
+    except Exception as e:
+        logger.error(f"Failed to download or parse config.json for {model_id}: {e}")
+        raise ValueError(f"Could not retrieve valid config.json for {model_id}") from e
+        
+    model_type = config_dict.get("model_type")
+    architectures = config_dict.get("architectures", [])
+    
+    logger.info(f"Detected model_type: {model_type}")
+    logger.info(f"Detected architectures: {architectures}")
+    
+    if not model_type:
+        raise ValueError(f"config.json is missing 'model_type'. Content keys: {list(config_dict.keys())}")
+        
+    try:
+        tokenizer_kwargs = kwargs.get("tokenizer_kwargs", {})
+        if "token" in kwargs:
+            tokenizer_kwargs["token"] = kwargs["token"]
+            
+        tokenizer = AutoTokenizer.from_pretrained(model_id, revision=model_revision, **tokenizer_kwargs)
+        
+        model_kwargs_dict = kwargs.get("model_kwargs", {})
+        if "token" in kwargs:
+            model_kwargs_dict["token"] = kwargs["token"]
+            
+        config_obj = AutoConfig.from_pretrained(config_path)
+        
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_id, 
+            revision=model_revision, 
+            config=config_obj,
+            **model_kwargs_dict
+        )
+        
+        pipe = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+        sentiment_pipeline = pipe
+        model_version = f"{model_id}@{model_revision}"
+        logger.info("Model loaded successfully.")
+        
+    except Exception as e:
+        logger.error(f"Transformers failed to load {model_id} even though config has model_type='{model_type}'. This indicates a compatibility or environment issue, not a missing model_type.")
+        raise
 
 async def batch_processor():
     """Background task to pull from queue, batch texts, and run inference."""
