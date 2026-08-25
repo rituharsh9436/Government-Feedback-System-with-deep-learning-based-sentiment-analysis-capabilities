@@ -8,6 +8,9 @@ export const authAPI = {
       body: new URLSearchParams({ username: email, password }),
     });
     localStorage.setItem('role', data.role);
+    if (data.csrf_token) {
+      localStorage.setItem('csrf_token', data.csrf_token);
+    }
     return data;
   },
 
@@ -34,6 +37,7 @@ export const authAPI = {
       // Ignore errors on logout
     } finally {
       localStorage.removeItem('role');
+      localStorage.removeItem('csrf_token');
     }
   },
 

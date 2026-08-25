@@ -159,7 +159,7 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
     response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400) # Readable by JS for headers
 
     await log_audit_action("login", user.email)
-    return {"message": "Successfully logged in", "role": user.role.value}
+    return {"message": "Successfully logged in", "role": user.role.value, "csrf_token": csrf_token}
 
 @router.post("/refresh")
 @limiter.limit("10/minute")
@@ -195,11 +195,13 @@ async def refresh_token(request: Request, response: Response):
 
     access_token, _ = create_access_token(data={"sub": email, "role": role})
     new_refresh_token, _ = create_refresh_token(data={"sub": email, "role": role})
+    new_csrf_token = generate_csrf_token()
     
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    response.set_cookie(key="csrf_token", value=new_csrf_token, httponly=False, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
     
-    return {"message": "Tokens refreshed successfully"}
+    return {"message": "Tokens refreshed successfully", "csrf_token": new_csrf_token}
 
 @router.post("/logout")
 async def logout(request: Request, response: Response, current_user: dict = Depends(get_current_user)):

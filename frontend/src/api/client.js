@@ -29,8 +29,14 @@ const getCookie = (name) => {
   return null;
 };
 
+const getCsrfToken = () => {
+  const cookieVal = getCookie('csrf_token');
+  if (cookieVal) return cookieVal;
+  return localStorage.getItem('csrf_token');
+};
+
 export async function request(path, options = {}) {
-  const csrfToken = getCookie('csrf_token');
+  const csrfToken = getCsrfToken();
   const headers = { ...options.headers };
 
   if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
@@ -48,8 +54,16 @@ export async function request(path, options = {}) {
     if (!isRefreshing) {
       isRefreshing = true;
       refreshPromise = fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' })
-        .then((refreshRes) => {
+        .then(async (refreshRes) => {
           if (!refreshRes.ok) throw new Error('Refresh failed');
+          try {
+            const data = await refreshRes.json();
+            if (data && data.csrf_token) {
+              localStorage.setItem('csrf_token', data.csrf_token);
+            }
+          } catch (jsonError) {
+            // Ignore JSON parse error if response is empty
+          }
         })
         .catch((e) => {
           throw new ApiError('Session expired', 401);
@@ -68,7 +82,7 @@ export async function request(path, options = {}) {
     }
     
     // Refresh the CSRF token in the headers in case it changed
-    const newCsrfToken = getCookie('csrf_token');
+    const newCsrfToken = getCsrfToken();
     if (newCsrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
       headers['X-CSRF-Token'] = newCsrfToken;
     }
