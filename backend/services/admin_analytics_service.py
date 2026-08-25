@@ -51,8 +51,9 @@ async def get_overview(department: Optional[str] = None, date_from: Optional[dat
             "$facet": {
                 "total_comments": [{"$count": "count"}],
                 "sentiment_counts": [
-                    {"$match": {"sentiment": {"$in": ["POSITIVE", "NEGATIVE", "NEUTRAL"]}}},
-                    {"$group": {"_id": "$sentiment", "count": {"$sum": 1}}}
+                    {"$project": {"sentiment_upper": {"$toUpper": "$sentiment"}}},
+                    {"$match": {"sentiment_upper": {"$in": ["POSITIVE", "NEGATIVE", "NEUTRAL"]}}},
+                    {"$group": {"_id": "$sentiment_upper", "count": {"$sum": 1}}}
                 ],
                 "avg_confidence": [
                     {"$match": {"sentiment_score": {"$exists": True, "$type": "number"}}},
@@ -123,12 +124,16 @@ async def get_trends(department: Optional[str] = None, date_from: Optional[datet
         
         # Group by YYYY-MM-DD
         pipeline.extend([
-            {"$match": {"sentiment": {"$in": ["POSITIVE", "NEGATIVE", "NEUTRAL"]}}},
+            {"$project": {
+                "created_at": 1,
+                "sentiment_upper": {"$toUpper": "$sentiment"}
+            }},
+            {"$match": {"sentiment_upper": {"$in": ["POSITIVE", "NEGATIVE", "NEUTRAL"]}}},
             {
                 "$group": {
                     "_id": {
                         "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
-                        "sentiment": "$sentiment"
+                        "sentiment": "$sentiment_upper"
                     },
                     "count": {"$sum": 1}
                 }
@@ -178,9 +183,9 @@ async def get_policies(department: Optional[str] = None, date_from: Optional[dat
                     "category": {"$first": "$post_info.category"},
                     "total_comments": {"$sum": 1},
                     "avg_confidence": {"$avg": {"$cond": [{"$eq": [{"$type": "$sentiment_score"}, "number"]}, "$sentiment_score", None]}},
-                    "positive": {"$sum": {"$cond": [{"$eq": ["$sentiment", "POSITIVE"]}, 1, 0]}},
-                    "negative": {"$sum": {"$cond": [{"$eq": ["$sentiment", "NEGATIVE"]}, 1, 0]}},
-                    "neutral": {"$sum": {"$cond": [{"$eq": ["$sentiment", "NEUTRAL"]}, 1, 0]}}
+                    "positive": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "POSITIVE"]}, 1, 0]}},
+                    "negative": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEGATIVE"]}, 1, 0]}},
+                    "neutral": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEUTRAL"]}, 1, 0]}}
                 }
             },
             {"$sort": {"total_comments": -1}}
