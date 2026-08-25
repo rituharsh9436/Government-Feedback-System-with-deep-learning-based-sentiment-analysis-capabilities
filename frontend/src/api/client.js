@@ -20,28 +20,13 @@ export class ApiError extends Error {
 }
 
 let isRefreshing = false;
-let refreshSubscribers = [];
+let refreshPromise = null;
 
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) return parts.pop().split(';').shift();
   return null;
-};
-
-const subscribeTokenRefresh = (resolve, reject) => {
-  refreshSubscribers.push({ resolve, reject });
-};
-
-const onRefreshed = (error = null) => {
-  refreshSubscribers.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve();
-    }
-  });
-  refreshSubscribers = [];
 };
 
 export async function request(path, options = {}) {
@@ -62,21 +47,22 @@ export async function request(path, options = {}) {
   if (response.status === 401 && path !== '/auth/refresh' && path !== '/auth/login' && path !== '/auth/logout') {
     if (!isRefreshing) {
       isRefreshing = true;
-      try {
-        const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
-        if (!refreshRes.ok) throw new Error('Refresh failed');
-        isRefreshing = false;
-        onRefreshed();
-      } catch (e) {
-        isRefreshing = false;
-        onRefreshed(new ApiError('Session expired', 401));
-        throw new ApiError('Session expired', 401);
-      }
+      refreshPromise = fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' })
+        .then((refreshRes) => {
+          if (!refreshRes.ok) throw new Error('Refresh failed');
+        })
+        .catch((e) => {
+          throw new ApiError('Session expired', 401);
+        })
+        .finally(() => {
+          isRefreshing = false;
+          refreshPromise = null;
+        });
     }
 
     // Wait for the refresh to complete, then retry the original request
     try {
-      await new Promise((resolve, reject) => subscribeTokenRefresh(resolve, reject));
+      await refreshPromise;
     } catch (e) {
       throw e;
     }
