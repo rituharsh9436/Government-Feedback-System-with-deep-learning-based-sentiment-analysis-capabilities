@@ -6,10 +6,38 @@ from transformers import pipeline
 import os
 import logging
 import asyncio
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger("uvicorn.error")
 
-app = FastAPI(title="ML Service")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    model_id = os.getenv("MODEL_ID")
+    model_revision = os.getenv("MODEL_REVISION", "main")
+    model_subfolder = os.getenv("MODEL_SUBFOLDER")
+    hf_token = os.getenv("HF_TOKEN")
+    
+    if not model_id:
+        logger.warning("MODEL_ID environment variable not set. ML Service will not be able to process requests.")
+    else:
+        kwargs = {}
+        if model_revision:
+            kwargs["revision"] = model_revision
+        if model_subfolder:
+            kwargs["model_kwargs"] = {"subfolder": model_subfolder}
+            kwargs["tokenizer_kwargs"] = {"subfolder": model_subfolder}
+        if hf_token:
+            kwargs["token"] = hf_token
+            
+        # Load model in a background thread to allow FastAPI to start serving health checks immediately
+        asyncio.create_task(asyncio.to_thread(_do_load_model, model_id, kwargs, model_revision))
+        
+        # Start the batch processor
+        asyncio.create_task(batch_processor())
+        
+    yield
+
+app = FastAPI(title="ML Service", lifespan=lifespan)
 
 sentiment_pipeline = None
 model_version = "unknown"
@@ -95,34 +123,8 @@ async def batch_processor():
             logger.error(f"Unexpected error in batch processor: {e}")
             await asyncio.sleep(1)
 
-@app.on_event("startup")
-async def load_model():
-    model_id = os.getenv("MODEL_ID")
-    model_revision = os.getenv("MODEL_REVISION", "main")
-    model_subfolder = os.getenv("MODEL_SUBFOLDER")
-    hf_token = os.getenv("HF_TOKEN")
-    
-    if not model_id:
-        logger.warning("MODEL_ID environment variable not set. ML Service will not be able to process requests.")
-        return
-        
-    kwargs = {}
-    if model_revision:
-        kwargs["revision"] = model_revision
-    if model_subfolder:
-        kwargs["model_kwargs"] = {"subfolder": model_subfolder}
-        kwargs["tokenizer_kwargs"] = {"subfolder": model_subfolder}
-    if hf_token:
-        kwargs["token"] = hf_token
-        
-    # Load model in a background thread to allow FastAPI to start serving health checks immediately
-    asyncio.create_task(asyncio.to_thread(_do_load_model, model_id, kwargs, model_revision))
-    
-    # Start the batch processor
-    asyncio.create_task(batch_processor())
-
 class TextRequest(BaseModel):
-    texts: List[str] = Field(..., max_items=100) # batch size validation
+    texts: List[str] = Field(..., max_length=100) # batch size validation
 
 class SentimentResult(BaseModel):
     label: str
@@ -187,6 +189,10 @@ async def analyze_sentiment(request: TextRequest):
         overall = "Mixed"
         
     return AnalysisResponse(results=results, overall_sentiment=overall)
+
+@app.get("/")
+def read_root():
+    return {"status": "ML Service is running. Please use /analyze endpoint."}
 
 @app.get("/health")
 def health_check():
