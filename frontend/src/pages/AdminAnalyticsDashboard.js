@@ -121,9 +121,9 @@ const AdminAnalyticsDashboard = () => {
             ) : loadingOverview ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
-              <div className="h-80">
+              <a href={`/admin/analytics/chart/sentiment-distribution?department=${department}&dateRange=${dateRange}`} target="_blank" rel="noopener noreferrer" className="block h-80 hover:opacity-80 transition-opacity" title="Open in new tab">
                 <SentimentDistributionChart data={sentimentChartData} />
-              </div>
+              </a>
             )}
           </div>
           
@@ -134,7 +134,9 @@ const AdminAnalyticsDashboard = () => {
             ) : loadingTrends ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
-              <TrendLineChart data={safeTrends} />
+              <a href={`/admin/analytics/chart/sentiment-trend?department=${department}&dateRange=${dateRange}`} target="_blank" rel="noopener noreferrer" className="block h-80 hover:opacity-80 transition-opacity" title="Open in new tab">
+                <TrendLineChart data={safeTrends} />
+              </a>
             )}
           </div>
         </section>
@@ -149,7 +151,9 @@ const AdminAnalyticsDashboard = () => {
             ) : loadingConfidence ? (
               <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
             ) : (
-              <ConfidenceDistributionChart data={safeConfidence} />
+              <a href={`/admin/analytics/chart/confidence-distribution?department=${department}&dateRange=${dateRange}`} target="_blank" rel="noopener noreferrer" className="block h-80 hover:opacity-80 transition-opacity" title="Open in new tab">
+                <ConfidenceDistributionChart data={safeConfidence} />
+              </a>
             )}
           </div>
 
