@@ -70,7 +70,7 @@ export const Layout = () => {
               <Link to="/login">
                 <Button variant="ghost" size="sm">Log in</Button>
               </Link>
-              <Link to="/signup">
+              <Link to="/login">
                 <Button size="sm">Get Started</Button>
               </Link>
             </div>

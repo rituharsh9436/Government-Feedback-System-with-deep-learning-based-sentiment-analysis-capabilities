@@ -99,6 +99,11 @@ async def setup_indexes():
                 "options": {"background": True, "name": "comments_post_id_created_at"}
             },
             {
+                "collection": "comments",
+                "keys": [("post_id", pymongo.ASCENDING), ("author_email", pymongo.ASCENDING)],
+                "options": {"background": True, "name": "comments_post_id_author_email"}
+            },
+            {
                 "collection": "posts",
                 "keys": [("title", pymongo.TEXT), ("description", pymongo.TEXT), ("category", pymongo.TEXT), ("location", pymongo.TEXT)],
                 "options": {"background": True, "name": "posts_text_search"}

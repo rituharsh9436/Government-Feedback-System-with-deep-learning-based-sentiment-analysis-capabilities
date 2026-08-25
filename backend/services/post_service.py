@@ -5,6 +5,7 @@ from fastapi import HTTPException, BackgroundTasks
 from database import db_connection
 from services.logger_service import app_logger
 import httpx
+import math
 from config import settings
 
 def parse_policy_id(value: str) -> ObjectId:
@@ -42,10 +43,11 @@ async def get_posts(
             query["category"] = {"$in": departments}
     if recent:
         query.setdefault("created_at", {})["$gte"] = datetime.utcnow() - timedelta(days=7)
-    if date_from:
-        query.setdefault("created_at", {})["$gte"] = date_from
-    if date_to:
-        query.setdefault("created_at", {})["$lte"] = date_to
+    else:
+        if date_from:
+            query.setdefault("created_at", {})["$gte"] = date_from
+        if date_to:
+            query.setdefault("created_at", {})["$lte"] = date_to
 
     skip = (page - 1) * limit
     total = await db_connection.db["posts"].count_documents(query)
@@ -87,7 +89,8 @@ async def get_posts(
     async for post in db_connection.db["posts"].aggregate(pipeline):
         items.append(map_post_to_response(post))
 
-    return {"items": items, "total": total, "page": page, "limit": limit}
+    total_pages = math.ceil(total / limit) if limit > 0 else 1
+    return {"items": items, "total": total, "page": page, "limit": limit, "pages": total_pages}
 
 async def get_post_by_id(policy_id: str):
     pipeline = [
@@ -284,7 +287,7 @@ async def get_overall_sentiment(user_email: str):
         match_stage["post.category"] = department_name
 
     pipeline = [
-        {"$match": {"sentiment": {"$nin": ["pending", "failed"]}, "sentiment": {"$exists": True}}},
+        {"$match": {"sentiment": {"$nin": ["pending", "failed"], "$exists": True}}},
         {"$lookup": {
             "from": "posts",
             "localField": "post_id",

@@ -47,9 +47,10 @@ export const usePolicyAnalysis = (id) => {
   });
 };
 
-export const useOverallAnalysis = () => {
+export const useOverallAnalysis = (options = {}) => {
   return useQuery({
     queryKey: ['overall-analysis'],
     queryFn: policiesAPI.getOverallAnalysis,
+    ...options
   });
 };

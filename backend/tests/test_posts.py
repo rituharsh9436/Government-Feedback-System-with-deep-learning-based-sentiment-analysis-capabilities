@@ -97,7 +97,8 @@ async def test_feedback_limits_and_ml(monkeypatch):
 
     # Get a comment id
     post = await db_connection.db["posts"].find_one({"_id": ObjectId(post_id)})
-    c_id = post["comments"][0]["id"]
+    comments = await db_connection.db["comments"].find({"post_id": ObjectId(post_id)}).to_list(length=None)
+    c_id = comments[0].get("id")
 
     # ML success
     class MockResponse:
@@ -109,11 +110,11 @@ async def test_feedback_limits_and_ml(monkeypatch):
     
     monkeypatch.setattr("httpx.AsyncClient.post", mock_post_success)
     await process_comment_sentiment_bg(post_id, "public@example.com", "Good", c_id)
-    post = await db_connection.db["posts"].find_one({"_id": ObjectId(post_id)})
-    assert post["comments"][0]["sentiment"] == "POSITIVE"
+    comments = await db_connection.db["comments"].find({"post_id": ObjectId(post_id)}).to_list(length=None)
+    assert comments[0]["sentiment"] == "POSITIVE"
 
     # ML permanent failure (e.g. 500 always)
-    c_id2 = post["comments"][1]["id"]
+    c_id2 = comments[1].get("id")
     class MockResponse500:
         status_code = 500
     async def mock_post_fail(*args, **kwargs):
@@ -125,8 +126,8 @@ async def test_feedback_limits_and_ml(monkeypatch):
     monkeypatch.setattr(asyncio, "sleep", lambda x: None)
     
     await process_comment_sentiment_bg(post_id, "public@example.com", "Ok", c_id2)
-    post = await db_connection.db["posts"].find_one({"_id": ObjectId(post_id)})
-    assert post["comments"][1]["sentiment"] == "failed"
+    comments = await db_connection.db["comments"].find({"post_id": ObjectId(post_id)}).to_list(length=None)
+    assert comments[1]["sentiment"] == "failed"
     
 @pytest.mark.asyncio
 async def test_analytics():

@@ -109,7 +109,9 @@ export const FeedPage = () => {
   };
 
   const { data, isLoading } = usePolicies(debouncedFilters);
-  const { data: overallAnalysis, isLoading: isAnalysisLoading } = useOverallAnalysis();
+  const { data: overallAnalysis, isLoading: isAnalysisLoading } = useOverallAnalysis({
+    enabled: user?.role === 'govt' || user?.role === 'admin'
+  });
 
   const policies = data?.items || [];
   const totalPages = data?.pages || 1;

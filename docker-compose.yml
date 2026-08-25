@@ -36,6 +36,8 @@ services:
     # Expose internally so backend can reach it, but allow scaling without host port conflicts
     expose:
       - "8001"
+    env_file:
+      - ./ml-service/.env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/ready"]
       interval: 30s
