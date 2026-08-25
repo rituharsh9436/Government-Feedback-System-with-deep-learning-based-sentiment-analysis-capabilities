@@ -28,6 +28,17 @@ async def get_current_user(request: Request):
     if email is None or role is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
+    # Verify user exists in DB and roles match
+    user_record = await db_connection.db["users"].find_one({"email": email})
+    if not user_record:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account no longer exists")
+        
+    if user_record.get("role") != role:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Role mismatch or changed")
+        
+    if role == "govt" and not user_record.get("is_approved", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Government account approval revoked")
+
     # CSRF Protection for state-changing requests
     if request.method in ["POST", "PUT", "PATCH", "DELETE"]:
         csrf_cookie = request.cookies.get("csrf_token")

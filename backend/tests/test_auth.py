@@ -1,39 +1,80 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app
-from database import get_db
+from app import app
+from database import db_connection
 import mongomock_motor
+from unittest.mock import patch, MagicMock
 
-client = TestClient(app)
+client = TestClient(app, base_url="https://testserver")
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_db():
-    # Use mongomock for testing
     mock_client = mongomock_motor.AsyncMongoMockClient()
     mock_db = mock_client.get_database("test_db")
-    
-    # We would normally override the dependency here if we were injecting it directly
-    # In this app, db_connection is a global instance in database.py
-    from database import db_connection
     db_connection.client = mock_client
     db_connection.db = mock_db
     yield
-    
-def test_signup_public_user():
-    response = client.post("/auth/signup", json={
-        "full_name": "Test User",
-        "email": "test@example.com",
-        "password": "password123",
-        "role": "public"
+
+@pytest.mark.asyncio
+async def test_signup_admin_blocked():
+    response = client.post("/auth/signup/request-otp", json={
+        "full_name": "Admin User",
+        "email": "admin@example.com",
+        "password": "Password@123",
+        "role": "admin"
     })
-    # Might fail with 400 if user exists, but it's a mock db
-    assert response.status_code in (201, 400)
+    assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_signup_and_login_public():
+    from services.auth_service import get_password_hash
+    user_data = {
+        "full_name": "Test Public",
+        "email": "public@example.com",
+        "hashed_password": get_password_hash("Password@123"),
+        "role": "public",
+        "is_approved": True
+    }
+    await db_connection.db["users"].insert_one(user_data)
     
-def test_login_user():
     response = client.post("/auth/login", data={
-        "username": "test@example.com",
-        "password": "password123"
+        "username": "public@example.com",
+        "password": "Password@123"
     })
-    # If signup worked, this returns 200. If mock db state isn't preserved between tests, it might fail.
-    # Just asserting it hits the endpoint correctly.
-    assert response.status_code in (200, 401)
+    assert response.status_code == 200
+    assert "access_token" in response.cookies
+    
+    response_invalid = client.post("/auth/login", data={
+        "username": "public@example.com",
+        "password": "wrong"
+    })
+    assert response_invalid.status_code == 401
+
+@pytest.mark.asyncio
+async def test_logout_idempotent():
+    from services.auth_service import get_password_hash
+    user_data = {
+        "full_name": "Test Logout",
+        "email": "logout@example.com",
+        "hashed_password": get_password_hash("Password@123"),
+        "role": "public",
+        "is_approved": True
+    }
+    await db_connection.db["users"].insert_one(user_data)
+    
+    # Use a new TestClient instance to ensure clean cookie jar
+    local_client = TestClient(app, base_url="https://testserver")
+    
+    login_response = local_client.post("/auth/login", data={
+        "username": "logout@example.com",
+        "password": "Password@123"
+    })
+    assert login_response.status_code == 200
+    
+    headers = {"x-csrf-token": local_client.cookies.get("csrf_token")}
+    
+    logout_res1 = local_client.post("/auth/logout", headers=headers)
+    assert logout_res1.status_code == 200
+    
+    logout_res2 = local_client.post("/auth/logout", headers=headers)
+    assert logout_res2.status_code == 401

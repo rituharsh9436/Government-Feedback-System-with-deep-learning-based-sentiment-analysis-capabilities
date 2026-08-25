@@ -99,47 +99,77 @@ async def get_post_by_id(policy_id: str):
         raise HTTPException(status_code=404, detail="Policy not found")
     return map_post_to_response(post)
 
-async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text: str):
+async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text: str, comment_id: str = None):
     """Background task to analyze sentiment and update the comment"""
-    try:
-        async with httpx.AsyncClient() as client:
-            api_key = getattr(settings, "ML_SERVICE_API_KEY", None) or ""
-            response = await client.post(
-                f"{settings.ML_SERVICE_URL}/analyze",
-                json={"texts": [comment_text]},
-                headers={"X-API-Key": api_key},
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                analysis_result = response.json()
-                if analysis_result.get("results") and len(analysis_result["results"]) > 0:
-                    first_result = analysis_result["results"][0]
-                    sentiment = first_result.get("label")
-                    sentiment_score = first_result.get("score")
-                    sentiment_model_version = first_result.get("model_version")
-                    
-                    # Update the specific comment in the database
-                    await db_connection.db["posts"].update_one(
-                        {
-                            "_id": parse_policy_id(policy_id),
-                            "comments": {
-                                "$elemMatch": {
-                                    "author_email": email,
-                                    "content": comment_text,
-                                    "sentiment": "pending"
+    import asyncio
+    max_retries = 3
+    base_delay = 2.0
+    
+    for attempt in range(max_retries + 1):
+        try:
+            async with httpx.AsyncClient() as client:
+                api_key = getattr(settings, "ML_SERVICE_API_KEY", None) or ""
+                response = await client.post(
+                    f"{settings.ML_SERVICE_URL}/analyze",
+                    json={"texts": [comment_text]},
+                    headers={"X-API-Key": api_key},
+                    timeout=10.0
+                )
+                if response.status_code == 200:
+                    analysis_result = response.json()
+                    if analysis_result.get("results") and len(analysis_result["results"]) > 0:
+                        first_result = analysis_result["results"][0]
+                        sentiment = first_result.get("label")
+                        sentiment_score = first_result.get("score")
+                        sentiment_model_version = first_result.get("model_version")
+                        
+                        # Update the specific comment in the database
+                        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending"}
+                        await db_connection.db["posts"].update_one(
+                            {
+                                "_id": parse_policy_id(policy_id),
+                                "comments": {"$elemMatch": match_cond}
+                            },
+                            {
+                                "$set": {
+                                    "comments.$.sentiment": sentiment,
+                                    "comments.$.sentiment_score": sentiment_score,
+                                    "comments.$.sentiment_model_version": sentiment_model_version
                                 }
                             }
-                        },
-                        {
-                            "$set": {
-                                "comments.$.sentiment": sentiment,
-                                "comments.$.sentiment_score": sentiment_score,
-                                "comments.$.sentiment_model_version": sentiment_model_version
-                            }
-                        }
-                    )
+                        )
+                        return # Success, exit background task
+                elif 400 <= response.status_code < 500:
+                    # Client error, don't retry
+                    app_logger.error(f"Client error from ML service: {response.status_code}")
+                    break
+        except (httpx.RequestError, httpx.TimeoutException) as e:
+            app_logger.warning(f"ML Service connection error on attempt {attempt + 1}: {e}")
+        except Exception as e:
+            app_logger.error(f"Unexpected ML Service Error: {e}")
+            break
+            
+        if attempt < max_retries:
+            delay = base_delay * (2 ** attempt)
+            await asyncio.sleep(delay)
+            
+    # If we get here, all retries failed or a permanent error occurred
+    app_logger.error(f"ML Service failed to process comment {comment_id or email} after {max_retries} retries. Marking as failed.")
+    try:
+        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending"}
+        await db_connection.db["posts"].update_one(
+            {
+                "_id": parse_policy_id(policy_id),
+                "comments": {"$elemMatch": match_cond}
+            },
+            {
+                "$set": {
+                    "comments.$.sentiment": "failed"
+                }
+            }
+        )
     except Exception as e:
-        app_logger.error(f"Background ML Service Error in process_comment_sentiment_bg: {e}")
+        app_logger.error(f"Failed to update comment status to failed: {e}")
 
 
 async def add_comment_to_post(policy_id: str, email: str, comment_data: dict, background_tasks: BackgroundTasks) -> int:
@@ -178,7 +208,7 @@ async def add_comment_to_post(policy_id: str, email: str, comment_data: dict, ba
             raise HTTPException(status_code=400, detail="You may only post three replies per policy")
             
     if comment_data.get("content"):
-        background_tasks.add_task(process_comment_sentiment_bg, policy_id, email, comment_data["content"])
+        background_tasks.add_task(process_comment_sentiment_bg, policy_id, email, comment_data["content"], comment_data.get("id"))
             
     # Calculate remaining (not strictly atomic for the return value, but the insertion was safe)
     post = await db_connection.db["posts"].find_one({"_id": object_id}, {"comments": 1})
@@ -267,7 +297,7 @@ async def get_overall_sentiment(user_email: str):
             ],
             "analyzed_comments": [
                 {"$unwind": "$comments"},
-                {"$match": {"comments.sentiment": {"$ne": "pending"}, "comments.sentiment": {"$exists": True}}},
+                {"$match": {"comments.sentiment": {"$nin": ["pending", "failed"]}, "comments.sentiment": {"$exists": True}}},
                 {"$facet": {
                     "overall_stats": [
                         {"$group": {

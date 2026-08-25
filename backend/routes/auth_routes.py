@@ -181,7 +181,11 @@ async def refresh_token(request: Request, response: Response):
         raise HTTPException(status_code=403, detail="Government account approval revoked")
     
     # Revoke old refresh token (Rotation)
-    await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
+    await db_connection.db["token_blocklist"].update_one(
+        {"jti": jti},
+        {"$set": {"revoked_at": datetime.utcnow()}},
+        upsert=True
+    )
 
     access_token, _ = create_access_token(data={"sub": email, "role": role})
     new_refresh_token, _ = create_refresh_token(data={"sub": email, "role": role})
@@ -193,21 +197,22 @@ async def refresh_token(request: Request, response: Response):
 
 @router.post("/logout")
 async def logout(request: Request, response: Response, current_user: dict = Depends(get_current_user)):
-    jti = current_user.get("jti")
-    if jti:
-        await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
-        
-    refresh_token = request.cookies.get("refresh_token")
-    if refresh_token:
-        payload = decode_token(refresh_token)
-        if payload and payload.get("type") == "refresh":
-            refresh_jti = payload.get("jti")
-            if refresh_jti:
-                await db_connection.db["token_blocklist"].insert_one({"jti": refresh_jti, "revoked_at": datetime.utcnow()})
-        
-    response.delete_cookie(key="access_token", secure=True, samesite="none")
-    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
-    response.delete_cookie(key="csrf_token", secure=True, samesite="none")
+    try:
+        jti = current_user.get("jti")
+        if jti:
+            await db_connection.db["token_blocklist"].update_one({"jti": jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
+            
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token:
+            payload = decode_token(refresh_token)
+            if payload and payload.get("type") == "refresh":
+                refresh_jti = payload.get("jti")
+                if refresh_jti:
+                    await db_connection.db["token_blocklist"].update_one({"jti": refresh_jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
+    finally:
+        response.delete_cookie(key="access_token", secure=True, samesite="none")
+        response.delete_cookie(key="refresh_token", secure=True, samesite="none")
+        response.delete_cookie(key="csrf_token", secure=True, samesite="none")
     
     await log_audit_action("logout", current_user["email"])
     return {"message": "Successfully logged out"}
@@ -272,21 +277,22 @@ async def delete_me(request: Request, response: Response, current_user: dict = D
     await db_connection.db["users"].delete_one({"email": current_user["email"]})
     
     # Revoke current token
-    jti = current_user.get("jti")
-    if jti:
-        await db_connection.db["token_blocklist"].insert_one({"jti": jti, "revoked_at": datetime.utcnow()})
-        
-    refresh_token = request.cookies.get("refresh_token")
-    if refresh_token:
-        payload = decode_token(refresh_token)
-        if payload and payload.get("type") == "refresh":
-            refresh_jti = payload.get("jti")
-            if refresh_jti:
-                await db_connection.db["token_blocklist"].insert_one({"jti": refresh_jti, "revoked_at": datetime.utcnow()})
-        
-    response.delete_cookie(key="access_token", secure=True, samesite="none")
-    response.delete_cookie(key="refresh_token", secure=True, samesite="none")
-    response.delete_cookie(key="csrf_token", secure=True, samesite="none")
+    try:
+        jti = current_user.get("jti")
+        if jti:
+            await db_connection.db["token_blocklist"].update_one({"jti": jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
+            
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token:
+            payload = decode_token(refresh_token)
+            if payload and payload.get("type") == "refresh":
+                refresh_jti = payload.get("jti")
+                if refresh_jti:
+                    await db_connection.db["token_blocklist"].update_one({"jti": refresh_jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
+    finally:
+        response.delete_cookie(key="access_token", secure=True, samesite="none")
+        response.delete_cookie(key="refresh_token", secure=True, samesite="none")
+        response.delete_cookie(key="csrf_token", secure=True, samesite="none")
     
     await log_audit_action("delete_account", current_user["email"])
     return {"message": "Account deleted successfully"}
