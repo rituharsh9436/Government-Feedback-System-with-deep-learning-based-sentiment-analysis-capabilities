@@ -27,6 +27,13 @@ export const policiesAPI = {
     return request(`/posts/${id}`);
   },
 
+  getComments: async (id, page = 1, limit = 10) => {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', limit);
+    return request(`/posts/${id}/comments?${params}`);
+  },
+
   create: async (policyData) => {
     return request('/posts/', {
       method: 'POST',

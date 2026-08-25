@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 
 from database import db_connection
 from models.post_model import PolicyComment
-from schemas.post_schema import PostCreate, PostResponse, PostPaginatedResponse
+from schemas.post_schema import PostCreate, PostResponse, PostPaginatedResponse, CommentPaginatedResponse
 from services.dependencies import get_current_user, RequireRole
 from services.post_service import (
     create_post as service_create_post,
@@ -14,7 +14,8 @@ from services.post_service import (
     add_comment_to_post,
     delete_post_by_id,
     get_policy_sentiment as service_get_policy_sentiment,
-    get_overall_sentiment as service_get_overall_sentiment
+    get_overall_sentiment as service_get_overall_sentiment,
+    get_comments_for_post
 )
 from services.analytics_service import analyze_comments as run_reanalyze_comments
 
@@ -77,6 +78,10 @@ async def trigger_reanalyze_comments(background_tasks: BackgroundTasks, user: di
 @router.get("/{policy_id}", response_model=PostResponse)
 async def get_post(policy_id: str):
     return await get_post_by_id(policy_id)
+
+@router.get("/{policy_id}/comments", response_model=CommentPaginatedResponse)
+async def get_post_comments(policy_id: str, page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)):
+    return await get_comments_for_post(policy_id, page, limit)
 
 @router.post("/{policy_id}/comments", status_code=201)
 async def save_policy_comment(

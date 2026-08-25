@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useDeletePolicy, useAddComment, usePolicyAnalysis } from '../../hooks/usePolicies';
+import { useDeletePolicy, useAddComment, usePolicyAnalysis, usePolicyComments } from '../../hooks/usePolicies';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Input } from '../../components/common/Input';
@@ -12,11 +12,18 @@ export const PolicyCard = ({ policy, onRepost }) => {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [showAnalysis, setShowAnalysis] = useState(false);
-  const [visibleCommentsCount, setVisibleCommentsCount] = useState(3);
   
   const { mutate: deletePolicy, isPending: isDeleting } = useDeletePolicy();
   const { mutate: addComment, isPending: isCommenting } = useAddComment();
   const { data: analysis, isLoading: isAnalysisLoading } = usePolicyAnalysis(showAnalysis ? (policy.id || policy._id) : null);
+
+  const [showComments, setShowComments] = useState(false);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const { data: commentsData, isLoading: isCommentsLoading } = usePolicyComments(
+    showComments ? (policy.id || policy._id) : null,
+    commentsPage,
+    5
+  );
 
   const isGovernment = user?.role === 'govt';
   const isAdmin = user?.role === 'admin';
@@ -48,6 +55,8 @@ export const PolicyCard = ({ policy, onRepost }) => {
     addComment({ id: policy.id || policy._id, content: comment }, {
       onSuccess: () => {
         setComment('');
+        setCommentsPage(1);
+        setShowComments(true);
         toast.success('Reply posted');
       },
       onError: (err) => {
@@ -132,9 +141,9 @@ export const PolicyCard = ({ policy, onRepost }) => {
                       </div>
                     </div>
                     {(() => {
-                      const posCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'POSITIVE').length || 0;
-                      const negCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() === 'NEGATIVE').length || 0;
-                      const neuCount = analysis.analysis?.results?.filter(r => r.label.toUpperCase() !== 'POSITIVE' && r.label.toUpperCase() !== 'NEGATIVE').length || 0;
+                      const posCount = analysis.analysis?.positive_count || 0;
+                      const negCount = analysis.analysis?.negative_count || 0;
+                      const neuCount = analysis.analysis?.neutral_count || 0;
                       const total = posCount + negCount + neuCount || 1;
                       const posPct = (posCount / total) * 100;
                       const negPct = (negCount / total) * 100;
@@ -167,53 +176,80 @@ export const PolicyCard = ({ policy, onRepost }) => {
       </div>
 
       <div className="bg-slate-50 px-6 py-5 border-t border-slate-200">
-        <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-slate-400" />
-          Public replies ({policy.comments?.length || 0})
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 cursor-pointer select-none" onClick={() => setShowComments(!showComments)}>
+            <MessageSquare className="w-4 h-4 text-slate-400" />
+            Public replies ({policy.comment_count || 0})
+          </h3>
+          <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)} className="h-8 text-xs">
+            {showComments ? 'Hide Replies' : 'Show Replies'}
+          </Button>
+        </div>
         
-        <div className="space-y-4 mb-4">
-          {policy.comments?.slice(0, visibleCommentsCount)?.map((c, index) => (
-            <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                    {c.author_email.charAt(0).toUpperCase()}
-                  </div>
-                  <p className="font-medium text-sm text-slate-900">{c.author_email}</p>
-                </div>
-                {showAnalysis && c.sentiment && (
-                  <Badge variant={c.sentiment.toUpperCase() === 'POSITIVE' ? 'success' : c.sentiment.toUpperCase() === 'NEGATIVE' ? 'destructive' : 'default'} className="capitalize">
-                    {c.sentiment.toLowerCase()}
-                  </Badge>
+        {showComments && (
+          <>
+            {isCommentsLoading ? (
+              <div className="animate-pulse space-y-4 mb-4">
+                <div className="h-16 bg-slate-200 rounded-lg w-full"></div>
+                <div className="h-16 bg-slate-200 rounded-lg w-full"></div>
+              </div>
+            ) : (
+              <div className="space-y-4 mb-4">
+                {commentsData?.items?.length > 0 ? (
+                  commentsData.items.map((c, index) => (
+                    <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                            {c.author_email.charAt(0).toUpperCase()}
+                          </div>
+                          <p className="font-medium text-sm text-slate-900">{c.author_email}</p>
+                        </div>
+                        {showAnalysis && c.sentiment && (
+                          <Badge variant={c.sentiment.toUpperCase() === 'POSITIVE' ? 'success' : c.sentiment.toUpperCase() === 'NEGATIVE' ? 'destructive' : 'default'} className="capitalize">
+                            {c.sentiment.toLowerCase()}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-slate-700 text-sm ml-8 leading-relaxed">{c.content}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 py-2">No replies yet.</p>
                 )}
               </div>
-              <p className="text-slate-700 text-sm ml-8 leading-relaxed">{c.content}</p>
-            </div>
-          ))}
-        </div>
+            )}
 
-        <div className="flex gap-4 ml-8 mb-5">
-          {policy.comments?.length > visibleCommentsCount && (
-            <button
-              onClick={() => setVisibleCommentsCount(prev => prev + 6)}
-              className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
-            >
-              View {Math.min(6, policy.comments.length - visibleCommentsCount)} more {Math.min(6, policy.comments.length - visibleCommentsCount) === 1 ? 'reply' : 'replies'}
-            </button>
-          )}
-          {visibleCommentsCount > 3 && (
-            <button
-              onClick={() => setVisibleCommentsCount(3)}
-              className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
-            >
-              Show fewer replies
-            </button>
-          )}
-        </div>
+            {commentsData?.pages > 1 && (
+              <div className="flex items-center justify-between gap-4 ml-8 mb-5">
+                <span className="text-xs text-slate-500">Page {commentsPage} of {commentsData.pages}</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={commentsPage <= 1}
+                    onClick={() => setCommentsPage(p => p - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={commentsPage >= commentsData.pages}
+                    onClick={() => setCommentsPage(p => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {user?.role === 'public' && (
-          <form onSubmit={handleComment} className="flex gap-3 ml-8">
+          <form onSubmit={handleComment} className="flex gap-3 ml-8 mt-2">
             <div className="flex-1 relative">
               <Input 
                 className="w-full bg-white pr-20"

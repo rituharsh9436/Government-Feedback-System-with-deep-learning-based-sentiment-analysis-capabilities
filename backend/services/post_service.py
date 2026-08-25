@@ -69,22 +69,14 @@ async def get_posts(
         
     if not sort_dict:
         sort_dict["created_at"] = -1
+        
+    sort_dict["_id"] = -1 # Deterministic tiebreaker
 
     pipeline = [
         {"$match": query},
         {"$sort": sort_dict},
         {"$skip": skip},
-        {"$limit": limit},
-        {"$lookup": {
-            "from": "comments",
-            "localField": "_id",
-            "foreignField": "post_id",
-            "as": "comments",
-            "pipeline": [
-                {"$sort": {"created_at": 1}},
-                {"$limit": 50}
-            ]
-        }}
+        {"$limit": limit}
     ]
     async for post in db_connection.db["posts"].aggregate(pipeline):
         items.append(map_post_to_response(post))
@@ -94,22 +86,28 @@ async def get_posts(
 
 async def get_post_by_id(policy_id: str):
     pipeline = [
-        {"$match": {"_id": parse_policy_id(policy_id)}},
-        {"$lookup": {
-            "from": "comments",
-            "localField": "_id",
-            "foreignField": "post_id",
-            "as": "comments",
-            "pipeline": [
-                {"$sort": {"created_at": 1}},
-                {"$limit": 50}
-            ]
-        }}
+        {"$match": {"_id": parse_policy_id(policy_id)}}
     ]
     result = await db_connection.db["posts"].aggregate(pipeline).to_list(1)
     if not result:
         raise HTTPException(status_code=404, detail="Policy not found")
     return map_post_to_response(result[0])
+
+async def get_comments_for_post(policy_id: str, page: int = 1, limit: int = 10):
+    query = {"post_id": parse_policy_id(policy_id)}
+    skip = (page - 1) * limit
+    total = await db_connection.db["comments"].count_documents(query)
+    
+    cursor = db_connection.db["comments"].find(query).sort("created_at", -1).skip(skip).limit(limit)
+    items = await cursor.to_list(length=None)
+    
+    # Map _id to id if necessary, or just return as is (FastAPI handles it usually if we convert _id)
+    for item in items:
+        item["id"] = str(item.pop("_id"))
+        item["post_id"] = str(item["post_id"])
+        
+    total_pages = math.ceil(total / limit) if limit > 0 else 1
+    return {"items": items, "total": total, "page": page, "limit": limit, "pages": total_pages}
 
 async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text: str, comment_id: str = None):
     """Background task to analyze sentiment and update the comment"""
@@ -246,17 +244,42 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
     if department_name != "Central" and str(department_name).lower() != str(post.get("category")).lower():
         raise HTTPException(status_code=403, detail="You do not have permission to view analysis for this department")
         
-    # Fetch comments from the comments collection
-    comments_cursor = db_connection.db["comments"].find({"post_id": post["_id"]})
-    comments = await comments_cursor.to_list(length=None)
+    # Use MongoDB aggregation to count sentiments
+    pipeline = [
+        {"$match": {"post_id": post["_id"]}},
+        {
+            "$group": {
+                "_id": {"$toUpper": "$sentiment"},
+                "count": {"$sum": 1}
+            }
+        }
+    ]
     
-    # Calculate overall sentiment from stored data (only for analyzed comments)
-    analyzed_comments = [c for c in comments if c.get("sentiment") and c.get("sentiment") not in ("pending", "failed")]
-    positive_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "POSITIVE")
-    negative_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEGATIVE")
-    neutral_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEUTRAL")
+    sentiment_counts = await db_connection.db["comments"].aggregate(pipeline).to_list(length=None)
     
-    if not analyzed_comments:
+    total_comments = 0
+    positive_count = 0
+    negative_count = 0
+    neutral_count = 0
+    
+    for sc in sentiment_counts:
+        count = sc.get("count", 0)
+        total_comments += count
+        
+        sentiment_label = sc.get("_id")
+        if not sentiment_label or sentiment_label in ("PENDING", "FAILED"):
+            continue
+            
+        if sentiment_label == "POSITIVE":
+            positive_count += count
+        elif sentiment_label == "NEGATIVE":
+            negative_count += count
+        elif sentiment_label == "NEUTRAL":
+            neutral_count += count
+            
+    total_analyzed = positive_count + negative_count + neutral_count
+    
+    if total_analyzed == 0:
         overall = "No Analysis"
     elif positive_count > negative_count and positive_count > neutral_count:
         overall = "Positive"
@@ -266,22 +289,17 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
         overall = "Neutral"
     else:
         overall = "Mixed"
-        
-    results = []
-    for c in analyzed_comments:
-        results.append({
-            "label": c.get("sentiment"),
-            "score": c.get("sentiment_score", 0),
-            "model_version": c.get("sentiment_model_version")
-        })
 
     analysis_result = {
-        "results": results,
+        "results": [],
+        "positive_count": positive_count,
+        "negative_count": negative_count,
+        "neutral_count": neutral_count,
         "overall_sentiment": overall,
-        "analyzed_count": len(analyzed_comments)
+        "analyzed_count": total_analyzed
     }
 
-    return str(post["_id"]), len(comments), analysis_result
+    return str(post["_id"]), total_comments, analysis_result
 
 async def get_overall_sentiment(user_email: str):
     user = await db_connection.db["users"].find_one({"email": user_email})

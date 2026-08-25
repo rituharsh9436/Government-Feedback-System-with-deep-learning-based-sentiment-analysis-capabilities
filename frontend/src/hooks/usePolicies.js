@@ -9,6 +9,15 @@ export const usePolicies = (filters) => {
   });
 };
 
+export const usePolicyComments = (id, page = 1, limit = 10) => {
+  return useQuery({
+    queryKey: ['policy-comments', id, page, limit],
+    queryFn: () => policiesAPI.getComments(id, page, limit),
+    enabled: !!id,
+    keepPreviousData: true,
+  });
+};
+
 export const useCreatePolicy = () => {
   const queryClient = useQueryClient();
   return useMutation({

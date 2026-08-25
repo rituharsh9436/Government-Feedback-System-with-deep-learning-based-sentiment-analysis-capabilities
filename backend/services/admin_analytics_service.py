@@ -172,9 +172,10 @@ async def get_trends(department: Optional[str] = None, date_from: Optional[datet
         app_logger.error(f"Error getting admin trends: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-async def get_policies(department: Optional[str] = None, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None):
+async def get_policies(department: Optional[str] = None, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None, page: int = 1, limit: int = 10):
     try:
         pipeline = await _get_base_pipeline(department, date_from, date_to)
+        skip = (page - 1) * limit
         
         pipeline.extend([
             {
@@ -189,18 +190,31 @@ async def get_policies(department: Optional[str] = None, date_from: Optional[dat
                     "neutral": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEUTRAL"]}, 1, 0]}}
                 }
             },
-            {"$sort": {"total_comments": -1}}
+            {"$sort": {"total_comments": -1, "_id": -1}},
+            {
+                "$facet": {
+                    "metadata": [{"$count": "total"}],
+                    "data": [{"$skip": skip}, {"$limit": limit}]
+                }
+            }
         ])
 
         cursor = db_connection.db["comments"].aggregate(pipeline)
-        results = await cursor.to_list(length=None)
+        results = await cursor.to_list(length=1)
+        
+        if not results:
+            return {"items": [], "total": 0, "page": page, "limit": limit, "pages": 0}
+            
+        facet_result = results[0]
+        total = facet_result["metadata"][0]["total"] if facet_result["metadata"] else 0
+        data = facet_result["data"]
         
         policies = []
-        for r in results:
-            total = r["positive"] + r["negative"] + r["neutral"]
-            if total > 0:
-                pos_pct = round((r["positive"] / total) * 100, 1)
-                neg_pct = round((r["negative"] / total) * 100, 1)
+        for r in data:
+            total_feedback = r["positive"] + r["negative"] + r["neutral"]
+            if total_feedback > 0:
+                pos_pct = round((r["positive"] / total_feedback) * 100, 1)
+                neg_pct = round((r["negative"] / total_feedback) * 100, 1)
                 
                 # Simple status indicator
                 status = "Mixed"
@@ -224,7 +238,8 @@ async def get_policies(department: Optional[str] = None, date_from: Optional[dat
                 "status": status
             })
             
-        return policies
+        total_pages = math.ceil(total / limit) if limit > 0 else 1
+        return {"items": policies, "total": total, "page": page, "limit": limit, "pages": total_pages}
 
     except Exception as e:
         app_logger.error(f"Error getting policy stats: {e}")

@@ -5,6 +5,8 @@ const buildQueryString = (params) => {
   if (params.department) query.set('department', params.department);
   if (params.dateFrom) query.set('date_from', params.dateFrom);
   if (params.dateTo) query.set('date_to', params.dateTo);
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
   const queryString = query.toString();
   return queryString ? `?${queryString}` : '';
 };

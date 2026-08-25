@@ -37,3 +37,11 @@ class PostPaginatedResponse(BaseModel):
     total: int
     page: int
     limit: int
+    pages: int
+
+class CommentPaginatedResponse(BaseModel):
+    items: list[CommentResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int

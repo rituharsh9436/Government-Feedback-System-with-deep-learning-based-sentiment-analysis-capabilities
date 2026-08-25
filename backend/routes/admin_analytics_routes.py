@@ -48,10 +48,12 @@ async def get_analytics_policies(
     department: Optional[str] = Query(None, description="Comma separated list of departments"),
     date_from: Optional[datetime] = Query(None, description="Start date filter"),
     date_to: Optional[datetime] = Query(None, description="End date filter"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     current_user: dict = Depends(RequireRole(["admin"]))
 ):
     effective_dept = get_effective_department(current_user, department)
-    return await get_policies(department=effective_dept, date_from=date_from, date_to=date_to)
+    return await get_policies(department=effective_dept, date_from=date_from, date_to=date_to, page=page, limit=limit)
 
 @router.get("/confidence")
 async def get_analytics_confidence(

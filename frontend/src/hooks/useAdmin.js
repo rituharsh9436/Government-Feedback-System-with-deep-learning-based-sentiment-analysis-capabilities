@@ -51,16 +51,19 @@ export const useAdmin = () => {
   return {
     requests: requestsData?.items || [],
     requestsTotal: requestsData?.total || 0,
+    requestsPages: requestsData?.pages || 1,
     reqPage,
     setReqPage,
     
     govtUsers: govtUsersData?.items || [],
     govtUsersTotal: govtUsersData?.total || 0,
+    govtUsersPages: govtUsersData?.pages || 1,
     govtUsersPage,
     setGovtUsersPage,
     
     publicUsers: publicUsersData?.items || [],
     publicUsersTotal: publicUsersData?.total || 0,
+    publicUsersPages: publicUsersData?.pages || 1,
     publicUsersPage,
     setPublicUsersPage,
     

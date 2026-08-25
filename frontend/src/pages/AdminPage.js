@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminPage = () => {
-  const { requests, requestsTotal, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPage, setPublicUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const { requests, requestsTotal, requestsPages, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPages, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPages, publicUsersPage, setPublicUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
@@ -137,8 +137,8 @@ export const AdminPage = () => {
           {requestsTotal > 10 && (
             <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
               <Button variant="outline" size="sm" onClick={() => setReqPage(p => Math.max(1, p - 1))} disabled={reqPage === 1 || isProcessing}>Previous</Button>
-              <span className="text-sm text-slate-500">Page {reqPage} of {Math.ceil(requestsTotal / 10)}</span>
-              <Button variant="outline" size="sm" onClick={() => setReqPage(p => p + 1)} disabled={reqPage >= Math.ceil(requestsTotal / 10) || isProcessing}>Next</Button>
+              <span className="text-sm text-slate-500">Page {reqPage} of {requestsPages}</span>
+              <Button variant="outline" size="sm" onClick={() => setReqPage(p => p + 1)} disabled={reqPage >= requestsPages || isProcessing}>Next</Button>
             </div>
           )}
         </div>
@@ -210,8 +210,8 @@ export const AdminPage = () => {
           {currentTotal > 10 && (
             <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isProcessing}>Previous</Button>
-              <span className="text-sm text-slate-500">Page {currentPage} of {Math.ceil(currentTotal / 10)}</span>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={currentPage >= Math.ceil(currentTotal / 10) || isProcessing}>Next</Button>
+              <span className="text-sm text-slate-500">Page {currentPage} of {userListTab === 'govt' ? govtUsersPages : publicUsersPages}</span>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={currentPage >= (userListTab === 'govt' ? govtUsersPages : publicUsersPages) || isProcessing}>Next</Button>
             </div>
           )}
         </div>

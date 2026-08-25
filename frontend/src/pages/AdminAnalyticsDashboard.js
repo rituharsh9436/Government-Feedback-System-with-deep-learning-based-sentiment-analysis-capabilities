@@ -10,6 +10,7 @@ import TrendLineChart from '../components/charts/TrendLineChart';
 import ConfidenceDistributionChart from '../components/charts/ConfidenceDistributionChart';
 
 const AdminAnalyticsDashboard = () => {
+  const [policyPage, setPolicyPage] = useState(1);
   const [department, setDepartment] = useState('');
   const [dateRange, setDateRange] = useState('all'); // all, 7d, 30d, 90d
 
@@ -29,10 +30,11 @@ const AdminAnalyticsDashboard = () => {
 
   const { dateFrom, dateTo } = getDates();
   const params = { department: department || undefined, dateFrom, dateTo };
+  const policiesParams = { ...params, page: policyPage, limit: 10 };
 
   const { data: overview, isLoading: loadingOverview, isError: errorOverview } = useAdminAnalyticsOverview(params);
   const { data: trends, isLoading: loadingTrends, isError: errorTrends } = useAdminAnalyticsTrends(params);
-  const { data: policies, isLoading: loadingPolicies, isError: errorPolicies } = useAdminAnalyticsPolicies(params);
+  const { data: policiesData, isLoading: loadingPolicies, isError: errorPolicies } = useAdminAnalyticsPolicies(policiesParams);
   const { data: confidence, isLoading: loadingConfidence, isError: errorConfidence } = useAdminAnalyticsConfidence(params);
 
   // Safe fallbacks to prevent runtime crashes
@@ -42,7 +44,8 @@ const AdminAnalyticsDashboard = () => {
     sentiment: { positive_percentage: 0, negative_percentage: 0, neutral_percentage: 0, positive: 0, negative: 0, neutral: 0 }
   };
   const safeTrends = Array.isArray(trends) ? trends : [];
-  const safePolicies = Array.isArray(policies) ? policies : [];
+  const safePolicies = policiesData?.items || [];
+  const policyTotalPages = policiesData?.pages || 1;
   const safeConfidence = Array.isArray(confidence) ? confidence : [];
 
   const sentimentChartData = [
@@ -59,7 +62,10 @@ const AdminAnalyticsDashboard = () => {
           <div className="flex gap-4">
             <select
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+              onChange={(e) => {
+                setDepartment(e.target.value);
+                setPolicyPage(1);
+              }}
               className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1"
             >
               <option value="">All Departments</option>
@@ -70,7 +76,10 @@ const AdminAnalyticsDashboard = () => {
             </select>
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              onChange={(e) => {
+                setDateRange(e.target.value);
+                setPolicyPage(1);
+              }}
               className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1"
             >
               <option value="all">All Time</option>
@@ -185,7 +194,7 @@ const AdminAnalyticsDashboard = () => {
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Policy Sentiment Drill-down</h2>
-            <span className="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">{safePolicies.length} Policies</span>
+            <span className="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">{policiesData?.total || 0} Policies</span>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -236,6 +245,27 @@ const AdminAnalyticsDashboard = () => {
               </tbody>
             </table>
           </div>
+          {policyTotalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Page {policyPage} of {policyTotalPages}</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPolicyPage(p => Math.max(1, p - 1))}
+                  disabled={policyPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPolicyPage(p => Math.min(policyTotalPages, p + 1))}
+                  disabled={policyPage === policyTotalPages}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
       </main>

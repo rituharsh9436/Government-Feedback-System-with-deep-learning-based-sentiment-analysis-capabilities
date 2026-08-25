@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Optional
+import math
 
 from database import db_connection
 from config import settings
@@ -334,7 +335,8 @@ async def list_government_requests(
     async for user in cursor:
         users.append(map_user_to_response(user))
         
-    return {"items": users, "total": total, "page": page, "limit": limit}
+    pages = math.ceil(total / limit) if limit > 0 else 1
+    return {"items": users, "total": total, "page": page, "limit": limit, "pages": pages}
 
 
 @router.get("/users", response_model=UserPaginatedResponse)
@@ -360,7 +362,8 @@ async def list_managed_users(
     async for user in cursor:
         users.append(map_user_to_response(user))
         
-    return {"items": users, "total": total, "page": page, "limit": limit}
+    pages = math.ceil(total / limit) if limit > 0 else 1
+    return {"items": users, "total": total, "page": page, "limit": limit, "pages": pages}
 
 
 @router.post("/government-requests/{user_id}/approve")

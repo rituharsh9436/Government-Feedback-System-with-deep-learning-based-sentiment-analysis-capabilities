@@ -54,6 +54,7 @@ class UserPaginatedResponse(BaseModel):
     total: int
     page: int
     limit: int
+    pages: int
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=100, strip_whitespace=True)
