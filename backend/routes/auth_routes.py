@@ -14,6 +14,7 @@ from services.email_service import send_otp_email
 from rate_limiter import limiter
 from datetime import datetime, timedelta
 import secrets
+import pymongo.errors
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -121,7 +122,12 @@ async def verify_otp(request: Request, verify_data: OTPVerify):
         "is_approved": requested_role == UserRole.PUBLIC,
     }
 
-    await db_connection.db["users"].insert_one(new_user)
+    try:
+        await db_connection.db["users"].insert_one(new_user)
+    except pymongo.errors.DuplicateKeyError:
+        # Also clean up pending record on failure
+        await db_connection.db["pending_users"].delete_one({"email": email})
+        raise HTTPException(status_code=400, detail="Account with this email already exists")
     
     # Remove pending record
     await db_connection.db["pending_users"].delete_one({"email": email})
@@ -281,10 +287,9 @@ async def delete_me(request: Request, response: Response, current_user: dict = D
         {"author_email": current_user["email"]},
         {"$set": {"author_email": "deleted_user"}}
     )
-    await db_connection.db["posts"].update_many(
-        {"comments.author_email": current_user["email"]},
-        {"$set": {"comments.$[elem].author_email": "deleted_user"}},
-        array_filters=[{"elem.author_email": current_user["email"]}]
+    await db_connection.db["comments"].update_many(
+        {"author_email": current_user["email"]},
+        {"$set": {"author_email": "deleted_user"}}
     )
     
     # Revoke current token
@@ -387,10 +392,9 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
             {"author_email": target_email},
             {"$set": {"author_email": "deleted_user"}}
         )
-        await db_connection.db["posts"].update_many(
-            {"comments.author_email": target_email},
-            {"$set": {"comments.$[elem].author_email": "deleted_user"}},
-            array_filters=[{"elem.author_email": target_email}]
+        await db_connection.db["comments"].update_many(
+            {"author_email": target_email},
+            {"$set": {"author_email": "deleted_user"}}
         )
         
     await log_audit_action("delete_user", current_user["email"], target_id=user_id)

@@ -63,6 +63,8 @@ async def metrics():
 async def startup_db_client():
     app_logger.info("Application starting up...")
     await connect_to_mongo()
+    from services.db_init import setup_indexes
+    await setup_indexes()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

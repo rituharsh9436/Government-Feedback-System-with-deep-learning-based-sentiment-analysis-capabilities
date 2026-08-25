@@ -17,6 +17,7 @@ def map_post_to_response(post: dict) -> dict:
     return post
 
 async def create_post(data: dict) -> str:
+    data["comment_count"] = 0
     result = await db_connection.db["posts"].insert_one(data)
     return str(result.inserted_id)
 
@@ -51,49 +52,61 @@ async def get_posts(
 
     items = []
     
+    sort_dict = {}
     if sort_popularity:
-        sort_dict = {}
         if sort_popularity == "most_replied":
             sort_dict["comment_count"] = -1
         else:
             sort_dict["comment_count"] = 1
             
-        if sort_name:
-            sort_dict["title"] = 1 if sort_name == "asc" else -1
-            
-        if sort_date:
-            sort_dict["created_at"] = -1 if sort_date == "newest" else 1
-            
-        pipeline = [
-            {"$match": query},
-            {"$addFields": {"comment_count": {"$size": {"$ifNull": ["$comments", []]}}}},
-            {"$sort": sort_dict},
-            {"$skip": skip},
-            {"$limit": limit}
-        ]
-        async for post in db_connection.db["posts"].aggregate(pipeline):
-            items.append(map_post_to_response(post))
-    else:
-        sort_list = []
-        if sort_name:
-            sort_list.append(("title", 1 if sort_name == "asc" else -1))
-        if sort_date:
-            sort_list.append(("created_at", -1 if sort_date == "newest" else 1))
-            
-        if not sort_list:
-            sort_list.append(("created_at", -1))
+    if sort_name:
+        sort_dict["title"] = 1 if sort_name == "asc" else -1
+        
+    if sort_date:
+        sort_dict["created_at"] = -1 if sort_date == "newest" else 1
+        
+    if not sort_dict:
+        sort_dict["created_at"] = -1
 
-        cursor = db_connection.db["posts"].find(query).sort(sort_list).skip(skip).limit(limit)
-        async for post in cursor:
-            items.append(map_post_to_response(post))
+    pipeline = [
+        {"$match": query},
+        {"$sort": sort_dict},
+        {"$skip": skip},
+        {"$limit": limit},
+        {"$lookup": {
+            "from": "comments",
+            "localField": "_id",
+            "foreignField": "post_id",
+            "as": "comments",
+            "pipeline": [
+                {"$sort": {"created_at": 1}},
+                {"$limit": 50}
+            ]
+        }}
+    ]
+    async for post in db_connection.db["posts"].aggregate(pipeline):
+        items.append(map_post_to_response(post))
 
     return {"items": items, "total": total, "page": page, "limit": limit}
 
 async def get_post_by_id(policy_id: str):
-    post = await db_connection.db["posts"].find_one({"_id": parse_policy_id(policy_id)})
-    if not post:
+    pipeline = [
+        {"$match": {"_id": parse_policy_id(policy_id)}},
+        {"$lookup": {
+            "from": "comments",
+            "localField": "_id",
+            "foreignField": "post_id",
+            "as": "comments",
+            "pipeline": [
+                {"$sort": {"created_at": 1}},
+                {"$limit": 50}
+            ]
+        }}
+    ]
+    result = await db_connection.db["posts"].aggregate(pipeline).to_list(1)
+    if not result:
         raise HTTPException(status_code=404, detail="Policy not found")
-    return map_post_to_response(post)
+    return map_post_to_response(result[0])
 
 async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text: str, comment_id: str = None):
     """Background task to analyze sentiment and update the comment"""
@@ -120,17 +133,14 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
                         sentiment_model_version = first_result.get("model_version")
                         
                         # Update the specific comment in the database
-                        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending"}
-                        await db_connection.db["posts"].update_one(
-                            {
-                                "_id": parse_policy_id(policy_id),
-                                "comments": {"$elemMatch": match_cond}
-                            },
+                        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
+                        await db_connection.db["comments"].update_one(
+                            match_cond,
                             {
                                 "$set": {
-                                    "comments.$.sentiment": sentiment,
-                                    "comments.$.sentiment_score": sentiment_score,
-                                    "comments.$.sentiment_model_version": sentiment_model_version
+                                    "sentiment": sentiment,
+                                    "sentiment_score": sentiment_score,
+                                    "sentiment_model_version": sentiment_model_version
                                 }
                             }
                         )
@@ -152,15 +162,12 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
     # If we get here, all retries failed or a permanent error occurred
     app_logger.error(f"ML Service failed to process comment {comment_id or email} after {max_retries} retries. Marking as failed.")
     try:
-        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending"}
-        await db_connection.db["posts"].update_one(
-            {
-                "_id": parse_policy_id(policy_id),
-                "comments": {"$elemMatch": match_cond}
-            },
+        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
+        await db_connection.db["comments"].update_one(
+            match_cond,
             {
                 "$set": {
-                    "comments.$.sentiment": "failed"
+                    "sentiment": "failed"
                 }
             }
         )
@@ -171,45 +178,35 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
 async def add_comment_to_post(policy_id: str, email: str, comment_data: dict, background_tasks: BackgroundTasks) -> int:
     object_id = parse_policy_id(policy_id)
     
+    # Check if post exists first
+    post = await db_connection.db["posts"].find_one({"_id": object_id}, {"_id": 1})
+    if not post:
+        raise HTTPException(status_code=404, detail="Policy not found")
+        
+    # Check rate limit (max 3 comments per user per post)
+    user_comment_count = await db_connection.db["comments"].count_documents({
+        "post_id": object_id,
+        "author_email": email
+    })
+    
+    if user_comment_count >= 3:
+        raise HTTPException(status_code=400, detail="You may only post three replies per policy")
+    
     # Mark sentiment as pending initially
     comment_data["sentiment"] = "pending"
-            
-    # We want to allow a max of 3 comments per user per post atomically.
-    query = {
-        "_id": object_id,
-        "$expr": {
-            "$lt": [
-                {"$size": {
-                    "$filter": {
-                        "input": {"$ifNull": ["$comments", []]},
-                        "cond": {"$eq": ["$$this.author_email", email]}
-                    }
-                }},
-                3
-            ]
-        }
-    }
+    comment_data["post_id"] = object_id
     
-    result = await db_connection.db["posts"].update_one(
-        query,
-        {"$push": {"comments": comment_data}}
+    await db_connection.db["comments"].insert_one(comment_data)
+    
+    await db_connection.db["posts"].update_one(
+        {"_id": object_id},
+        {"$inc": {"comment_count": 1}}
     )
-    
-    if result.modified_count == 0:
-        # Check if the post exists to distinguish between "not found" and "limit reached"
-        post = await db_connection.db["posts"].find_one({"_id": object_id}, {"_id": 1})
-        if not post:
-            raise HTTPException(status_code=404, detail="Policy not found")
-        else:
-            raise HTTPException(status_code=400, detail="You may only post three replies per policy")
             
     if comment_data.get("content"):
         background_tasks.add_task(process_comment_sentiment_bg, policy_id, email, comment_data["content"], comment_data.get("id"))
             
-    # Calculate remaining (not strictly atomic for the return value, but the insertion was safe)
-    post = await db_connection.db["posts"].find_one({"_id": object_id}, {"comments": 1})
-    replies = sum(1 for item in post.get("comments", []) if item.get("author_email") == email)
-    return max(0, 3 - replies)
+    return max(0, 3 - (user_comment_count + 1))
 
 async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
     query = {"_id": parse_policy_id(policy_id)}
@@ -219,6 +216,9 @@ async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
     result = await db_connection.db["posts"].delete_one(query)
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="Policy not found or not owned by you")
+        
+    # Delete associated comments
+    await db_connection.db["comments"].delete_many({"post_id": parse_policy_id(policy_id)})
 
 async def get_policy_sentiment(policy_id: str, user_email: str):
     user = await db_connection.db["users"].find_one({"email": user_email})
@@ -235,7 +235,9 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
     if department_name != "Central" and str(department_name).lower() != str(post.get("category")).lower():
         raise HTTPException(status_code=403, detail="You do not have permission to view analysis for this department")
         
-    comments = post.get("comments", [])
+    # Fetch comments from the comments collection
+    comments_cursor = db_connection.db["comments"].find({"post_id": post["_id"]})
+    comments = await comments_cursor.to_list(length=None)
     
     # Calculate overall sentiment from stored data (only for analyzed comments)
     analyzed_comments = [c for c in comments if c.get("sentiment") and c.get("sentiment") not in ("pending", "failed")]
@@ -279,101 +281,112 @@ async def get_overall_sentiment(user_email: str):
     
     match_stage = {}
     if department_name != "Central":
-        match_stage["category"] = department_name
+        match_stage["post.category"] = department_name
 
     pipeline = [
+        {"$match": {"sentiment": {"$nin": ["pending", "failed"]}, "sentiment": {"$exists": True}}},
+        {"$lookup": {
+            "from": "posts",
+            "localField": "post_id",
+            "foreignField": "_id",
+            "as": "post"
+        }},
+        {"$unwind": "$post"},
         {"$match": match_stage},
         {"$facet": {
-            "policy_metrics": [
+            "overall_stats": [
                 {"$group": {
                     "_id": None,
-                    "policy_count": {"$sum": 1},
-                    "comment_count": {"$sum": {"$size": {"$ifNull": ["$comments", []]}}}
+                    "analyzed_count": {"$sum": 1},
+                    "positive_count": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "POSITIVE"]}, 1, 0]}
+                    },
+                    "negative_count": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEGATIVE"]}, 1, 0]}
+                    },
+                    "neutral_count": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEUTRAL"]}, 1, 0]}
+                    }
                 }}
             ],
-            "analyzed_comments": [
-                {"$unwind": "$comments"},
-                {"$match": {"comments.sentiment": {"$nin": ["pending", "failed"]}, "comments.sentiment": {"$exists": True}}},
-                {"$facet": {
-                    "overall_stats": [
-                        {"$group": {
-                            "_id": None,
-                            "analyzed_count": {"$sum": 1},
-                            "positive_count": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "POSITIVE"]}, 1, 0]}
-                            },
-                            "negative_count": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "NEGATIVE"]}, 1, 0]}
-                            },
-                            "neutral_count": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "NEUTRAL"]}, 1, 0]}
-                            }
-                        }}
-                    ],
-                    "category_stats": [
-                        {"$group": {
-                            "_id": "$category",
-                            "count": {"$sum": 1},
-                            "positive": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "POSITIVE"]}, 1, 0]}
-                            },
-                            "negative": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "NEGATIVE"]}, 1, 0]}
-                            },
-                            "neutral": {
-                                "$sum": {"$cond": [{"$eq": [{"$toUpper": "$comments.sentiment"}, "NEUTRAL"]}, 1, 0]}
-                            }
-                        }},
-                        {"$project": {
-                            "category": {"$ifNull": ["$_id", "Uncategorized"]},
-                            "count": 1,
-                            "positive": 1,
-                            "negative": 1,
-                            "neutral": 1,
-                            "_id": 0
-                        }},
-                        {"$sort": {"category": 1}}
-                    ],
-                    "date_stats": [
-                        {"$group": {
-                            "_id": {
-                                "$dateToString": {
-                                    "format": "%Y-%m-%d",
-                                    "date": {"$toDate": "$comments.created_at"}
-                                }
-                            },
-                            "count": {"$sum": 1}
-                        }},
-                        {"$match": {"_id": {"$ne": None}}},
-                        {"$project": {
-                            "date": "$_id",
-                            "count": 1,
-                            "_id": 0
-                        }},
-                        {"$sort": {"date": 1}}
-                    ],
-                    "score_stats": [
-                        {"$match": {"comments.sentiment_score": {"$exists": True, "$type": "number"}}},
-                        {"$group": {
-                            "_id": {"$round": ["$comments.sentiment_score", 1]},
-                            "count": {"$sum": 1}
-                        }},
-                        {"$project": {
-                            "score_bin": {"$toString": "$_id"},
-                            "count": 1,
-                            "_id": 0
-                        }},
-                        {"$sort": {"_id": 1}}
-                    ]
-                }}
+            "category_stats": [
+                {"$group": {
+                    "_id": "$post.category",
+                    "count": {"$sum": 1},
+                    "positive": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "POSITIVE"]}, 1, 0]}
+                    },
+                    "negative": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEGATIVE"]}, 1, 0]}
+                    },
+                    "neutral": {
+                        "$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEUTRAL"]}, 1, 0]}
+                    }
+                }},
+                {"$project": {
+                    "category": {"$ifNull": ["$_id", "Uncategorized"]},
+                    "count": 1,
+                    "positive": 1,
+                    "negative": 1,
+                    "neutral": 1,
+                    "_id": 0
+                }},
+                {"$sort": {"category": 1}}
+            ],
+            "date_stats": [
+                {"$group": {
+                    "_id": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%d",
+                            "date": {"$toDate": "$created_at"}
+                        }
+                    },
+                    "count": {"$sum": 1}
+                }},
+                {"$match": {"_id": {"$ne": None}}},
+                {"$project": {
+                    "date": "$_id",
+                    "count": 1,
+                    "_id": 0
+                }},
+                {"$sort": {"date": 1}}
+            ],
+            "score_stats": [
+                {"$match": {"sentiment_score": {"$exists": True, "$type": "number"}}},
+                {"$group": {
+                    "_id": {"$round": ["$sentiment_score", 1]},
+                    "count": {"$sum": 1}
+                }},
+                {"$project": {
+                    "score_bin": {"$toString": "$_id"},
+                    "count": 1,
+                    "_id": 0
+                }},
+                {"$sort": {"_id": 1}}
             ]
         }}
     ]
     
-    # Execute the aggregation pipeline
-    result_cursor = db_connection.db["posts"].aggregate(pipeline)
+    # Execute the aggregation pipeline on comments collection
+    result_cursor = db_connection.db["comments"].aggregate(pipeline)
     # The cursor will return exactly one document containing the facets
     result = await result_cursor.to_list(length=1)
+    
+    # Also fetch policy metrics separately to avoid complex facets on the entire comments collection
+    policy_match = {}
+    if department_name != "Central":
+        policy_match["category"] = department_name
+        
+    policy_metrics_cursor = db_connection.db["posts"].aggregate([
+        {"$match": policy_match},
+        {"$group": {
+            "_id": None,
+            "policy_count": {"$sum": 1},
+            "comment_count": {"$sum": {"$ifNull": ["$comment_count", 0]}}
+        }}
+    ])
+    policy_metrics_result = await policy_metrics_cursor.to_list(length=1)
+    policy_metrics = policy_metrics_result[0] if policy_metrics_result else {}
     if not result:
         # Fallback empty structure
         return {
@@ -391,14 +404,12 @@ async def get_overall_sentiment(user_email: str):
             "analyzed_count": 0
         }
         
-    facets = result[0]
-    policy_metrics = facets.get("policy_metrics", [{}])[0] if facets.get("policy_metrics") else {}
-    analyzed_comments_facets = facets.get("analyzed_comments", [{}])[0] if facets.get("analyzed_comments") else {}
+    facets = result[0] if result else {}
     
     policy_count = policy_metrics.get("policy_count", 0)
     comment_count = policy_metrics.get("comment_count", 0)
     
-    overall_stats = analyzed_comments_facets.get("overall_stats", [{}])[0] if analyzed_comments_facets.get("overall_stats") else {}
+    overall_stats = facets.get("overall_stats", [{}])[0] if facets.get("overall_stats") else {}
     
     analyzed_count = overall_stats.get("analyzed_count", 0)
     positive_count = overall_stats.get("positive_count", 0)
@@ -416,9 +427,9 @@ async def get_overall_sentiment(user_email: str):
     else:
         overall = "Mixed"
 
-    category_comparison = analyzed_comments_facets.get("category_stats", [])
-    feedback_over_time = analyzed_comments_facets.get("date_stats", [])
-    formatted_scores = analyzed_comments_facets.get("score_stats", [])
+    category_comparison = facets.get("category_stats", [])
+    feedback_over_time = facets.get("date_stats", [])
+    formatted_scores = facets.get("score_stats", [])
 
     # Ensure format '1.0' instead of '1' for the histogram string
     for score in formatted_scores:

@@ -24,39 +24,29 @@ async def analyze_comments(standalone: bool = True):
             logger.error("Failed to connect to the database. Exiting.")
             return
 
-    # Query for posts that have unanalyzed comments
-    # A comment is unanalyzed if `sentiment` is missing, 'pending', or 'failed'
+    # Query for comments that have unanalyzed sentiment
     query = {
-        "comments": {
-            "$elemMatch": {
-                "$or": [
-                    {"sentiment": {"$exists": False}},
-                    {"sentiment": {"$in": ["pending", "failed"]}}
-                ]
-            }
-        }
+        "$or": [
+            {"sentiment": {"$exists": False}},
+            {"sentiment": {"$in": ["pending", "failed"]}}
+        ]
     }
     
-    posts_cursor = db_connection.db["posts"].find(query)
+    comments_cursor = db_connection.db["comments"].find(query)
     
     comments_to_process = []
     
-    async for post in posts_cursor:
-        post_id = post["_id"]
-        for comment in post.get("comments", []):
-            sentiment = comment.get("sentiment")
-            if not sentiment or sentiment in ["pending", "failed"]:
-                # If comment text is completely empty, skip it or mark as Neutral
-                if not comment.get("content") or not comment.get("content").strip():
-                    continue
-                    
-                comments_to_process.append({
-                    "post_id": post_id,
-                    "comment_id": comment.get("id"),
-                    "author_email": comment.get("author_email"),
-                    "content": comment.get("content"),
-                    "original_comment": comment
-                })
+    async for comment in comments_cursor:
+        # If comment text is completely empty, skip it
+        if not comment.get("content") or not comment.get("content").strip():
+            continue
+            
+        comments_to_process.append({
+            "comment_id": comment.get("_id"),
+            "post_id": comment.get("post_id"),
+            "author_email": comment.get("author_email"),
+            "content": comment.get("content")
+        })
                 
     logger.info(f"Found {len(comments_to_process)} comments requiring analysis.")
     
@@ -100,25 +90,16 @@ async def analyze_comments(standalone: bool = True):
                     for j, result in enumerate(results):
                         c = batch[j]
                         
-                        match_cond = {}
-                        if c["comment_id"]:
-                            match_cond["id"] = c["comment_id"]
-                        else:
-                            # Fallback if comment has no ID (should be rare)
-                            match_cond["author_email"] = c["author_email"]
-                            match_cond["content"] = c["content"]
+                        match_cond = {"_id": c["comment_id"]}
                             
                         # Prepare update operation
                         update_op = UpdateOne(
-                            {
-                                "_id": c["post_id"],
-                                "comments": {"$elemMatch": match_cond}
-                            },
+                            match_cond,
                             {
                                 "$set": {
-                                    "comments.$.sentiment": result.get("label"),
-                                    "comments.$.sentiment_score": result.get("score"),
-                                    "comments.$.sentiment_model_version": result.get("model_version")
+                                    "sentiment": result.get("label"),
+                                    "sentiment_score": result.get("score"),
+                                    "sentiment_model_version": result.get("model_version")
                                 }
                             }
                         )
@@ -135,7 +116,7 @@ async def analyze_comments(standalone: bool = True):
     if bulk_operations:
         logger.info(f"Executing {len(bulk_operations)} bulk update operations on database...")
         try:
-            result = await db_connection.db["posts"].bulk_write(bulk_operations, ordered=False)
+            result = await db_connection.db["comments"].bulk_write(bulk_operations, ordered=False)
             logger.info(f"Bulk update complete. Modified {result.modified_count} documents.")
         except Exception as e:
             logger.error(f"Error executing bulk write: {e}")

@@ -81,6 +81,12 @@ export async function request(path, options = {}) {
       throw e;
     }
     
+    // Refresh the CSRF token in the headers in case it changed
+    const newCsrfToken = getCookie('csrf_token');
+    if (newCsrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
+      headers['X-CSRF-Token'] = newCsrfToken;
+    }
+    
     // Retry with the same options. The browser will automatically send the new cookies.
     response = await fetch(`${API_URL}${path}`, {
       ...options,
