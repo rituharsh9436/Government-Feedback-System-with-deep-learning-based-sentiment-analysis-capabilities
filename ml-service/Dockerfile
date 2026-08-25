@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Pre-download the model is removed since the model ID is dynamic at runtime
 COPY . .
 
-EXPOSE 8001
+EXPOSE 7860
 
 # Cloud Run expects the app to listen on the port defined by the PORT environment variable
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8001}"]
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]

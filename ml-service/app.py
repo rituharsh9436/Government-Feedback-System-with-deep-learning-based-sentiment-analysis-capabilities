@@ -10,8 +10,14 @@ import os
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+import modal
 
 logger = logging.getLogger("uvicorn.error")
+
+app = modal.App("ml-service")
+image = modal.Image.debian_slim(python_version="3.10").pip_install(
+    "fastapi", "uvicorn", "transformers", "torch", "pydantic", "huggingface_hub"
+)
 
 def sanitize_env_var(key: str, val: Optional[str]) -> Optional[str]:
     if not val:
@@ -63,7 +69,7 @@ async def lifespan(app: FastAPI):
             await batch_task
         except asyncio.CancelledError:
             pass
-app = FastAPI(title="ML Service", lifespan=lifespan)
+fastapi_app = FastAPI(title="ML Service", lifespan=lifespan)
 
 sentiment_pipeline = None
 model_version = "unknown"
@@ -204,7 +210,7 @@ class AnalysisResponse(BaseModel):
     results: List[SentimentResult]
     overall_sentiment: str
 
-@app.post("/analyze", response_model=AnalysisResponse, dependencies=[Depends(get_api_key)])
+@fastapi_app.post("/analyze", response_model=AnalysisResponse, dependencies=[Depends(get_api_key)])
 async def analyze_sentiment(request: TextRequest):
     if not sentiment_pipeline:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded")
@@ -259,21 +265,29 @@ async def analyze_sentiment(request: TextRequest):
         
     return AnalysisResponse(results=results, overall_sentiment=overall)
 
-@app.get("/")
+@fastapi_app.get("/")
 def read_root():
     return {"status": "ML Service is running. Please use /analyze endpoint."}
 
-@app.get("/health")
+@fastapi_app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-@app.get("/ready")
+@fastapi_app.get("/ready")
 def ready_check():
     if sentiment_pipeline:
         return {"status": "ready"}
     raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded")
 
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("ml-service-secrets")]
+)
+@modal.asgi_app()
+def serve():
+    return fastapi_app
+
 if __name__ == "__main__":
     import uvicorn
     # Hugging Face Spaces (Gradio SDK) routes external traffic to port 7860
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=7860)
