@@ -62,7 +62,7 @@ export const PolicyForm = ({ initialPolicy, onSuccess, onCancel }) => {
           className="flex-1 md:max-w-xs"
           label="Category" 
           required 
-          disabled
+          disabled={user?.department_name !== 'Central'}
           value={form.category} 
           onChange={(e) => update('category', e.target.value)} 
           placeholder="e.g. Transportation"

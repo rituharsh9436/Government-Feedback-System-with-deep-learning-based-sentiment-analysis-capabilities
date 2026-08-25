@@ -34,11 +34,7 @@ async def get_posts(
 ):
     query = {}
     if keyword:
-        query["$or"] = [
-            {"title": {"$regex": keyword, "$options": "i"}},
-            {"description": {"$regex": keyword, "$options": "i"}},
-            {"category": {"$regex": keyword, "$options": "i"}}
-        ]
+        query["$text"] = {"$search": keyword}
     if department:
         departments = [d.strip() for d in department.split(",") if d.strip()]
         if departments:
@@ -242,7 +238,7 @@ async def get_policy_sentiment(policy_id: str, user_email: str):
     comments = post.get("comments", [])
     
     # Calculate overall sentiment from stored data (only for analyzed comments)
-    analyzed_comments = [c for c in comments if c.get("sentiment")]
+    analyzed_comments = [c for c in comments if c.get("sentiment") and c.get("sentiment") not in ("pending", "failed")]
     positive_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "POSITIVE")
     negative_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEGATIVE")
     neutral_count = sum(1 for c in analyzed_comments if str(c.get("sentiment")).upper() == "NEUTRAL")

@@ -25,9 +25,21 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key")
     return api_key_header
 
+import asyncio
+
+def _do_load_model(model_id, kwargs, model_revision):
+    global sentiment_pipeline, model_version
+    try:
+        logger.info(f"Loading model {model_id} (revision: {model_revision})...")
+        pipe = pipeline("sentiment-analysis", model=model_id, tokenizer=model_id, **kwargs)
+        sentiment_pipeline = pipe
+        model_version = f"{model_id}@{model_revision}"
+        logger.info("Model loaded successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}")
+
 @app.on_event("startup")
 async def load_model():
-    global sentiment_pipeline, model_version
     model_id = os.getenv("MODEL_ID")
     model_revision = os.getenv("MODEL_REVISION", "main")
     model_subfolder = os.getenv("MODEL_SUBFOLDER")
@@ -37,22 +49,17 @@ async def load_model():
         logger.warning("MODEL_ID environment variable not set. ML Service will not be able to process requests.")
         return
         
-    try:
-        logger.info(f"Loading model {model_id} (revision: {model_revision}, subfolder: {model_subfolder})...")
-        kwargs = {}
-        if model_revision:
-            kwargs["revision"] = model_revision
-        if model_subfolder:
-            kwargs["model_kwargs"] = {"subfolder": model_subfolder}
-            kwargs["tokenizer_kwargs"] = {"subfolder": model_subfolder}
-        if hf_token:
-            kwargs["token"] = hf_token
-            
-        sentiment_pipeline = pipeline("sentiment-analysis", model=model_id, tokenizer=model_id, **kwargs)
-        model_version = f"{model_id}@{model_revision}"
-        logger.info("Model loaded successfully.")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
+    kwargs = {}
+    if model_revision:
+        kwargs["revision"] = model_revision
+    if model_subfolder:
+        kwargs["model_kwargs"] = {"subfolder": model_subfolder}
+        kwargs["tokenizer_kwargs"] = {"subfolder": model_subfolder}
+    if hf_token:
+        kwargs["token"] = hf_token
+        
+    # Load model in a background thread to allow FastAPI to start serving health checks immediately
+    asyncio.create_task(asyncio.to_thread(_do_load_model, model_id, kwargs, model_revision))
 
 class TextRequest(BaseModel):
     texts: List[str] = Field(..., max_items=100) # batch size validation

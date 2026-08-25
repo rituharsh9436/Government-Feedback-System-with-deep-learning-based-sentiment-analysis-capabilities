@@ -276,6 +276,17 @@ async def delete_me(request: Request, response: Response, current_user: dict = D
     # Delete the user
     await db_connection.db["users"].delete_one({"email": current_user["email"]})
     
+    # Anonymize orphaned data
+    await db_connection.db["posts"].update_many(
+        {"author_email": current_user["email"]},
+        {"$set": {"author_email": "deleted_user"}}
+    )
+    await db_connection.db["posts"].update_many(
+        {"comments.author_email": current_user["email"]},
+        {"$set": {"comments.$[elem].author_email": "deleted_user"}},
+        array_filters=[{"elem.author_email": current_user["email"]}]
+    )
+    
     # Revoke current token
     try:
         jti = current_user.get("jti")
@@ -362,11 +373,25 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
     require_admin(current_user)
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user id")
+    target_user = await db_connection.db["users"].find_one({"_id": ObjectId(user_id)})
+    
     result = await db_connection.db["users"].delete_one(
         {"_id": ObjectId(user_id), "role": {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}},
     )
     if not result.deleted_count:
         raise HTTPException(status_code=404, detail="Public or government account not found")
+        
+    if target_user:
+        target_email = target_user["email"]
+        await db_connection.db["posts"].update_many(
+            {"author_email": target_email},
+            {"$set": {"author_email": "deleted_user"}}
+        )
+        await db_connection.db["posts"].update_many(
+            {"comments.author_email": target_email},
+            {"$set": {"comments.$[elem].author_email": "deleted_user"}},
+            array_filters=[{"elem.author_email": target_email}]
+        )
         
     await log_audit_action("delete_user", current_user["email"], target_id=user_id)
     return {"message": "Account deleted"}
