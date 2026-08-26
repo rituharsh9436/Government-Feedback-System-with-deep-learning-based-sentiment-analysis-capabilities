@@ -74,6 +74,24 @@ async def get_posts(
 
     pipeline = [
         {"$match": query},
+        {
+            "$lookup": {
+                "from": "comments",
+                "localField": "_id",
+                "foreignField": "post_id",
+                "as": "comments_arr"
+            }
+        },
+        {
+            "$addFields": {
+                "comment_count": {"$size": "$comments_arr"}
+            }
+        },
+        {
+            "$project": {
+                "comments_arr": 0
+            }
+        },
         {"$sort": sort_dict},
         {"$skip": skip},
         {"$limit": limit}
@@ -86,7 +104,25 @@ async def get_posts(
 
 async def get_post_by_id(policy_id: str):
     pipeline = [
-        {"$match": {"_id": parse_policy_id(policy_id)}}
+        {"$match": {"_id": parse_policy_id(policy_id)}},
+        {
+            "$lookup": {
+                "from": "comments",
+                "localField": "_id",
+                "foreignField": "post_id",
+                "as": "comments_arr"
+            }
+        },
+        {
+            "$addFields": {
+                "comment_count": {"$size": "$comments_arr"}
+            }
+        },
+        {
+            "$project": {
+                "comments_arr": 0
+            }
+        }
     ]
     result = await db_connection.db["posts"].aggregate(pipeline).to_list(1)
     if not result:
