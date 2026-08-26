@@ -2,9 +2,6 @@
 .agents
 .venv
 
-docs
-
-./docs/
 
 .env
 scripts/
