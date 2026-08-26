@@ -12,7 +12,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [showAnalysis, setShowAnalysis] = useState(false);
-  
+
   const { mutate: deletePolicy, isPending: isDeleting } = useDeletePolicy();
   const { mutate: addComment, isPending: isCommenting } = useAddComment();
   const { data: analysis, isLoading: isAnalysisLoading } = usePolicyAnalysis(showAnalysis ? (policy.id || policy._id) : null);
@@ -83,7 +83,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
               </span>
             </div>
           </div>
-          
+
           {canDelete && (
             <div className="flex gap-2 shrink-0 ml-4">
               {ownsPolicy && (
@@ -101,7 +101,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
         <div className="prose prose-slate prose-sm max-w-none text-slate-700 leading-relaxed">
           <p className="whitespace-pre-wrap">{policy.description}</p>
         </div>
-        
+
         {canViewAnalysis && (
           <div className="mt-6 pt-6 border-t border-slate-100">
             {!showAnalysis ? (
@@ -118,7 +118,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
                   </h4>
                   <Button variant="ghost" size="sm" onClick={() => setShowAnalysis(false)} className="h-8 text-xs">Hide</Button>
                 </div>
-                
+
                 {isAnalysisLoading ? (
                   <div className="animate-pulse flex gap-4">
                     <div className="h-4 bg-slate-200 rounded w-1/4"></div>
@@ -179,13 +179,13 @@ export const PolicyCard = ({ policy, onRepost }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 cursor-pointer select-none" onClick={() => setShowComments(!showComments)}>
             <MessageSquare className="w-4 h-4 text-slate-400" />
-            Public replies ({commentsData?.total !== undefined ? commentsData.total : (policy.comment_count || 0)})
+            Public replies ({commentsData?.total !== undefined ? commentsData.total : (policy.comment_count)})
           </h3>
           <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)} className="h-8 text-xs">
             {showComments ? 'Hide Replies' : 'Show Replies'}
           </Button>
         </div>
-        
+
         {showComments && (
           <>
             {isCommentsLoading ? (
@@ -251,12 +251,12 @@ export const PolicyCard = ({ policy, onRepost }) => {
         {user?.role === 'public' && (
           <form onSubmit={handleComment} className="flex gap-3 ml-8 mt-2">
             <div className="flex-1 relative">
-              <Input 
+              <Input
                 className="w-full bg-white pr-20"
-                required 
-                minLength="1" 
-                maxLength="2000" 
-                placeholder="Share your perspective..." 
+                required
+                minLength="1"
+                maxLength="2000"
+                placeholder="Share your perspective..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
