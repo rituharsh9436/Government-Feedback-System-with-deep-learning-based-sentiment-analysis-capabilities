@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminPage = () => {
-  const { requests, requestsTotal, requestsPages, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPages, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPages, publicUsersPage, setPublicUsersPage, searchEmail, setSearchEmail, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const { requests, requestsTotal, requestsPages, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPages, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPages, publicUsersPage, setPublicUsersPage, setSearchEmail, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
