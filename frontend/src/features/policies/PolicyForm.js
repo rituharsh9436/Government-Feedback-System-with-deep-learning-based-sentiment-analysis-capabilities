@@ -34,9 +34,9 @@ export const PolicyForm = ({ initialPolicy, onSuccess, onCancel }) => {
   };
 
   return (
-    <form className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6" onSubmit={handleSubmit}>
+    <form className="bg-card rounded-xl border border-border shadow-card p-6 sm:p-8 mb-6" onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-6 flex items-center gap-2">
-        <FileEdit className="w-5 h-5 text-primary-600" />
+        <FileEdit className="w-5 h-5 text-primary" />
         {initialPolicy ? 'Repost policy with updates' : 'Publish a new policy'}
       </h2>
       
@@ -80,7 +80,7 @@ export const PolicyForm = ({ initialPolicy, onSuccess, onCancel }) => {
       <div className="flex flex-col space-y-1.5 w-full mb-6">
         <label className="text-sm font-medium leading-none text-slate-700">Detailed Description</label>
         <textarea 
-          className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
+          className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
           required 
           minLength="10" 
           value={form.description} 

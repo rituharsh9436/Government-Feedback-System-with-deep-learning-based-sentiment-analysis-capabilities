@@ -100,7 +100,7 @@ export const AdminPage = () => {
           <Badge variant="warning">{requests.length} Requests</Badge>
         </div>
         
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
           {requests.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-500">
               <ShieldCheck className="w-12 h-12 text-slate-200 mb-3" />
@@ -109,7 +109,7 @@ export const AdminPage = () => {
           ) : (
             <ul className="divide-y divide-slate-100">
               {requests.map((user) => (
-                <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" key={user.id}>
+                <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" key={user.id}>
                   <div className="space-y-1">
                     <p className="font-semibold text-slate-900 text-lg">{user.full_name}</p>
                     <p className="text-sm text-slate-500">{user.email}</p>
@@ -135,7 +135,7 @@ export const AdminPage = () => {
             </ul>
           )}
           {requestsTotal > 10 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-muted">
               <Button variant="outline" size="sm" onClick={() => setReqPage(p => Math.max(1, p - 1))} disabled={reqPage === 1 || isProcessing}>Previous</Button>
               <span className="text-sm text-slate-500">Page {reqPage} of {requestsPages}</span>
               <Button variant="outline" size="sm" onClick={() => setReqPage(p => p + 1)} disabled={reqPage >= requestsPages || isProcessing}>Next</Button>
@@ -176,10 +176,10 @@ export const AdminPage = () => {
           </button>
         </div>
         
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
           <ul className="divide-y divide-slate-100">
             {currentUsers.map((user) => (
-              <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" key={user.id}>
+              <li className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors" key={user.id}>
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
                     <p className="font-semibold text-slate-900">{user.full_name}</p>
@@ -208,7 +208,7 @@ export const AdminPage = () => {
             ))}
           </ul>
           {currentTotal > 10 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-muted">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isProcessing}>Previous</Button>
               <span className="text-sm text-slate-500">Page {currentPage} of {userListTab === 'govt' ? govtUsersPages : publicUsersPages}</span>
               <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={currentPage >= (userListTab === 'govt' ? govtUsersPages : publicUsersPages) || isProcessing}>Next</Button>
@@ -229,7 +229,7 @@ export const AdminPage = () => {
           </h3>
         </div>
         
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6">
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h4 className="font-semibold text-slate-900">Re-Analyze Old Comments</h4>

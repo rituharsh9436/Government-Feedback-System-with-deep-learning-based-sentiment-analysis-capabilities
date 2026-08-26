@@ -55,10 +55,10 @@ const AdminAnalyticsDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <header className="bg-white border-b border-border sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Admin Sentiment Analytics</h1>
+          <h1 className="text-xl font-bold text-slate-900">Admin Sentiment Analytics</h1>
           <div className="flex gap-4">
             <select
               value={department}
@@ -66,7 +66,7 @@ const AdminAnalyticsDashboard = () => {
                 setDepartment(e.target.value);
                 setPolicyPage(1);
               }}
-              className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1"
+              className="border-input rounded-md text-sm focus:ring-primary focus:border-primary py-1"
             >
               <option value="">All Departments</option>
               <option value="Central">Central (Cross-department)</option>
@@ -80,7 +80,7 @@ const AdminAnalyticsDashboard = () => {
                 setDateRange(e.target.value);
                 setPolicyPage(1);
               }}
-              className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1"
+              className="border-input rounded-md text-sm focus:ring-primary focus:border-primary py-1"
             >
               <option value="all">All Time</option>
               <option value="7d">Last 7 Days</option>
@@ -95,26 +95,26 @@ const AdminAnalyticsDashboard = () => {
         
         {/* KPI Overview */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Feedback</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border flex flex-col justify-center items-center text-center">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Total Feedback</h3>
+            <p className="text-3xl font-bold text-slate-900 mt-2">
               {errorOverview ? 'Error' : loadingOverview ? '...' : (safeOverview.total_feedback || 0).toLocaleString()}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Avg Confidence</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border flex flex-col justify-center items-center text-center">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Avg Confidence</h3>
+            <p className="text-3xl font-bold text-slate-900 mt-2">
               {errorOverview ? 'Error' : loadingOverview ? '...' : ((safeOverview.average_confidence || 0) * 100).toFixed(0) + '%'}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Positive</h3>
-            <p className="text-3xl font-bold text-green-600 mt-2">
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border flex flex-col justify-center items-center text-center">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Positive</h3>
+            <p className="text-3xl font-bold text-emerald-600 mt-2">
               {errorOverview ? 'Error' : loadingOverview ? '...' : `${safeOverview.sentiment?.positive_percentage || 0}%`}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex flex-col justify-center items-center text-center">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Negative</h3>
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border flex flex-col justify-center items-center text-center">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Negative</h3>
             <p className="text-3xl font-bold text-red-600 mt-2">
               {errorOverview ? 'Error' : loadingOverview ? '...' : `${safeOverview.sentiment?.negative_percentage || 0}%`}
             </p>
@@ -123,12 +123,12 @@ const AdminAnalyticsDashboard = () => {
 
         {/* Charts Row 1 */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Distribution</h2>
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Sentiment Distribution</h2>
             {errorOverview ? (
               <div className="h-80 flex items-center justify-center text-red-500">Failed to load data</div>
             ) : loadingOverview ? (
-              <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
+              <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
             ) : (
               <a href={`/admin/analytics/chart/sentiment-distribution?department=${department}&dateRange=${dateRange}`} target="_blank" rel="noopener noreferrer" className="block h-80 hover:opacity-80 transition-opacity" title="Open in new tab">
                 <SentimentDistributionChart data={sentimentChartData} />
@@ -136,8 +136,8 @@ const AdminAnalyticsDashboard = () => {
             )}
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Trend</h2>
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Sentiment Trend</h2>
             {errorTrends ? (
               <div className="h-80 flex items-center justify-center text-red-500">Failed to load trend data</div>
             ) : loadingTrends ? (
@@ -152,13 +152,13 @@ const AdminAnalyticsDashboard = () => {
 
         {/* Charts Row 2 */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">ML Confidence Distribution</h2>
-            <p className="text-sm text-gray-500 mb-6">Scores closer to 1.0 indicate high confidence in the prediction.</p>
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">ML Confidence Distribution</h2>
+            <p className="text-sm text-muted-foreground mb-6">Scores closer to 1.0 indicate high confidence in the prediction.</p>
             {errorConfidence ? (
               <div className="h-80 flex items-center justify-center text-red-500">Failed to load confidence data</div>
             ) : loadingConfidence ? (
-              <div className="h-80 flex items-center justify-center text-gray-400">Loading...</div>
+              <div className="h-80 flex items-center justify-center text-slate-400">Loading...</div>
             ) : (
               <a href={`/admin/analytics/chart/confidence-distribution?department=${department}&dateRange=${dateRange}`} target="_blank" rel="noopener noreferrer" className="block h-80 hover:opacity-80 transition-opacity" title="Open in new tab">
                 <ConfidenceDistributionChart data={safeConfidence} />
@@ -166,8 +166,8 @@ const AdminAnalyticsDashboard = () => {
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h2>
+          <div className="bg-card rounded-xl shadow-card p-6 border border-border">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Alerts</h2>
             <div className="space-y-4">
               {errorPolicies ? (
                 <div className="text-red-500 text-center py-8">Failed to load alerts</div>
@@ -191,24 +191,24 @@ const AdminAnalyticsDashboard = () => {
         </section>
 
         {/* Data Table */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Policy Sentiment Drill-down</h2>
-            <span className="text-sm font-medium text-gray-500 px-3 py-1 bg-gray-100 rounded-full">{policiesData?.total || 0} Policies</span>
+        <section className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
+          <div className="p-6 border-b border-border flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-slate-900">Policy Sentiment Drill-down</h2>
+            <span className="text-sm font-medium text-muted-foreground px-3 py-1 bg-muted rounded-full">{policiesData?.total || 0} Policies</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Policy Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pos %</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Neg %</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Policy Name</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Volume</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Pos %</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Neg %</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {errorPolicies ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-12 text-center text-red-500">Failed to load policy data</td>
@@ -223,19 +223,19 @@ const AdminAnalyticsDashboard = () => {
                   </tr>
                 ) : (
                   safePolicies.map((policy) => (
-                    <tr key={policy.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 max-w-xs truncate" title={policy.title}>
+                    <tr key={policy.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 max-w-xs truncate" title={policy.title}>
                         {policy.title}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{policy.category}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{policy.total_feedback}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">{policy.positive_percentage}%</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{policy.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{policy.total_feedback}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-600">{policy.positive_percentage}%</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">{policy.negative_percentage}%</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${policy.status === 'Mostly Positive' ? 'bg-green-100 text-green-800' : 
+                          ${policy.status === 'Mostly Positive' ? 'bg-emerald-100 text-emerald-800' : 
                             policy.status === 'Mostly Negative' ? 'bg-red-100 text-red-800' : 
-                            'bg-gray-100 text-gray-800'}`}>
+                            'bg-slate-100 text-slate-800'}`}>
                           {policy.status}
                         </span>
                       </td>
@@ -246,20 +246,20 @@ const AdminAnalyticsDashboard = () => {
             </table>
           </div>
           {policyTotalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Page {policyPage} of {policyTotalPages}</span>
+            <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-muted">
+              <span className="text-sm text-muted-foreground">Page {policyPage} of {policyTotalPages}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPolicyPage(p => Math.max(1, p - 1))}
                   disabled={policyPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                  className="px-3 py-1 border border-input bg-card rounded text-sm disabled:opacity-50 hover:bg-muted/50 transition-colors"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPolicyPage(p => Math.min(policyTotalPages, p + 1))}
                   disabled={policyPage === policyTotalPages}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                  className="px-3 py-1 border border-input bg-card rounded text-sm disabled:opacity-50 hover:bg-muted/50 transition-colors"
                 >
                   Next
                 </button>

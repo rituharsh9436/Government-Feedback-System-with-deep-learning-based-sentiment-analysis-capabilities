@@ -7,15 +7,15 @@ export const Layout = () => {
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      <header className="sticky top-0 z-50 w-full border-b bg-white/75 backdrop-blur-md transition-all">
+    <div className="min-h-screen bg-background flex flex-col font-sans text-foreground">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-white/80 backdrop-blur-md shadow-sm transition-all">
         <div className="container mx-auto max-w-5xl px-6 h-16 flex items-center justify-between">
           <div className="flex flex-col">
             <Link 
               to="/" 
-              className="text-lg font-semibold tracking-tight hover:text-primary-600 transition-colors flex items-center gap-2"
+              className="text-lg font-bold tracking-tight text-foreground hover:text-primary transition-colors flex items-center gap-2"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-sm">
                 SF
               </div>
               SmartGov
@@ -26,7 +26,7 @@ export const Layout = () => {
             <div className="flex items-center gap-6">
               <Link 
                 to="/" 
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
                 Policies & Comments
@@ -36,14 +36,14 @@ export const Layout = () => {
                 <>
                   <Link 
                     to="/admin" 
-                    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     Admin
                   </Link>
                   <Link 
                     to="/admin/analytics" 
-                    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
                   >
                     <LineChart className="w-4 h-4" />
                     Analytics
@@ -53,7 +53,7 @@ export const Layout = () => {
               
               <Link 
                 to="/settings" 
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
                 <Settings className="w-4 h-4" />
                 Settings

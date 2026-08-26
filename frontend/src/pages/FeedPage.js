@@ -47,7 +47,7 @@ const DepartmentFilter = ({ selected = [], onChange }) => {
       <button 
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all hover:bg-slate-50"
+        className="flex items-center gap-2 h-10 pl-9 pr-4 rounded-md border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:bg-slate-50 shadow-sm"
       >
         <Filter className="absolute left-3 w-4 h-4 text-slate-400" />
         <span className="truncate max-w-[120px]">
@@ -197,19 +197,19 @@ export const FeedPage = () => {
                   <div className="space-y-8">
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                      <div className="bg-muted p-4 rounded-lg border border-border">
                         <span className="text-sm font-medium text-slate-500">Total Policies</span>
-                        <p className="text-2xl font-bold text-primary-600 mt-1">{overallAnalysis.policy_count}</p>
+                        <p className="text-2xl font-bold text-primary mt-1">{overallAnalysis.policy_count}</p>
                       </div>
-                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                      <div className="bg-muted p-4 rounded-lg border border-border">
                         <span className="text-sm font-medium text-slate-500">Public Feedback</span>
-                        <p className="text-2xl font-bold text-primary-600 mt-1">{overallAnalysis.comment_count}</p>
+                        <p className="text-2xl font-bold text-primary mt-1">{overallAnalysis.comment_count}</p>
                       </div>
-                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                      <div className="bg-muted p-4 rounded-lg border border-border">
                         <span className="text-sm font-medium text-slate-500">Overall Sentiment</span>
                         <p className="text-lg font-bold text-slate-800 capitalize mt-1">{overallAnalysis.overall_sentiment || 'Neutral'}</p>
                       </div>
-                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                      <div className="bg-muted p-4 rounded-lg border border-border">
                         <span className="text-sm font-medium text-slate-500">Analyzed Feedback</span>
                         <p className="text-lg font-bold text-slate-800 capitalize mt-1">{overallAnalysis.analyzed_count || 0}</p>
                       </div>
@@ -231,8 +231,8 @@ export const FeedPage = () => {
                             className="space-y-3 cursor-pointer group"
                             onClick={() => navigate('/analysis/sentiment-distribution')}
                           >
-                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Sentiment Distribution</h4>
-                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">Sentiment Distribution</h4>
+                            <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-64 group-hover:shadow-card-hover transition-shadow ring-1 ring-transparent group-hover:ring-primary/20">
                               <SentimentDistributionChart data={overallAnalysis.sentiment_distribution} />
                             </div>
                           </div>
@@ -241,8 +241,8 @@ export const FeedPage = () => {
                             className="space-y-3 cursor-pointer group"
                             onClick={() => navigate('/analysis/feedback-over-time')}
                           >
-                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">Feedback Over Time</h4>
-                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">Feedback Over Time</h4>
+                            <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-64 group-hover:shadow-card-hover transition-shadow ring-1 ring-transparent group-hover:ring-primary/20">
                               <FeedbackOverTimeChart data={overallAnalysis.feedback_over_time} />
                             </div>
                           </div>
@@ -251,10 +251,10 @@ export const FeedPage = () => {
                             className="space-y-3 cursor-pointer group"
                             onClick={() => navigate('/analysis/category-comparison')}
                           >
-                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">
                               {user?.department_name === 'Central' ? 'Category Comparison' : 'Policy Comparison'}
                             </h4>
-                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                            <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-64 group-hover:shadow-card-hover transition-shadow ring-1 ring-transparent group-hover:ring-primary/20">
                               <CategoryFeedbackChart data={overallAnalysis.category_comparison} />
                             </div>
                           </div>
@@ -263,8 +263,8 @@ export const FeedPage = () => {
                             className="space-y-3 cursor-pointer group"
                             onClick={() => navigate('/analysis/sentiment-score')}
                           >
-                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary-600 transition-colors">ML Confidence (Sentiment Score)</h4>
-                            <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm h-64 group-hover:shadow-md transition-shadow ring-1 ring-transparent group-hover:ring-primary-100">
+                            <h4 className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">ML Confidence (Sentiment Score)</h4>
+                            <div className="bg-card border border-border rounded-lg p-4 shadow-sm h-64 group-hover:shadow-card-hover transition-shadow ring-1 ring-transparent group-hover:ring-primary/20">
                               <SentimentScoreChart data={overallAnalysis.sentiment_scores} />
                             </div>
                           </div>
@@ -299,7 +299,7 @@ export const FeedPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
-                  className="w-full h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all placeholder:text-slate-400"
+                  className="w-full h-10 pl-9 pr-4 rounded-md border border-input bg-card text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-muted-foreground"
                   placeholder="Search policies by keyword..." 
                   value={filters.keyword} 
                   onChange={(e) => handleFilterChange({ keyword: e.target.value })} 

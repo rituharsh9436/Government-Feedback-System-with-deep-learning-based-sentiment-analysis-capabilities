@@ -66,11 +66,11 @@ export const PolicyCard = ({ policy, onRepost }) => {
   };
 
   return (
-    <article className="bg-white rounded-xl border border-slate-200 shadow-soft overflow-hidden transition-all hover:shadow-md">
-      <div className="p-6">
+    <article className="bg-card rounded-xl border border-border shadow-card overflow-hidden transition-all hover:shadow-card-hover">
+      <div className="p-6 sm:p-8">
         <div className="flex justify-between items-start mb-4">
           <div className="space-y-1.5">
-            <Badge variant="primary" className="mb-2 uppercase tracking-wider text-[10px]">{policy.category}</Badge>
+            <Badge variant="primary" className="mb-2 uppercase tracking-wider text-[10px] shadow-sm">{policy.category}</Badge>
             <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-tight">{policy.title}</h2>
             <div className="flex items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1.5">
@@ -110,10 +110,10 @@ export const PolicyCard = ({ policy, onRepost }) => {
                 View Sentiment Analysis
               </Button>
             ) : (
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
+              <div className="bg-muted border border-border rounded-lg p-5">
+                <div className="flex justify-between items-center mb-4">
                   <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-primary-500" />
+                    <Activity className="w-4 h-4 text-primary" />
                     Sentiment Analysis
                   </h4>
                   <Button variant="ghost" size="sm" onClick={() => setShowAnalysis(false)} className="h-8 text-xs">Hide</Button>
@@ -125,19 +125,19 @@ export const PolicyCard = ({ policy, onRepost }) => {
                     <div className="h-4 bg-slate-200 rounded w-1/4"></div>
                   </div>
                 ) : analysis ? (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
-                        <span className="text-xs text-slate-500 uppercase font-semibold">Replies Analyzed</span>
-                        <p className="text-lg font-bold text-slate-900 mt-1">{analysis.comment_count}</p>
+                      <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Replies Analyzed</span>
+                        <p className="text-xl font-bold text-slate-900 mt-1">{analysis.comment_count}</p>
                       </div>
-                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
-                        <span className="text-xs text-slate-500 uppercase font-semibold">Overall</span>
-                        <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis?.overall_sentiment || 'Neutral'}</p>
+                      <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Overall</span>
+                        <p className="text-xl font-bold text-slate-900 mt-1 capitalize">{analysis.analysis?.overall_sentiment || 'Neutral'}</p>
                       </div>
-                      <div className="bg-white p-3 rounded border border-slate-100 shadow-sm">
-                        <span className="text-xs text-slate-500 uppercase font-semibold">Status</span>
-                        <p className="text-lg font-bold text-slate-900 mt-1 capitalize">{analysis.analysis_status}</p>
+                      <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Status</span>
+                        <p className="text-xl font-bold text-slate-900 mt-1 capitalize">{analysis.analysis_status}</p>
                       </div>
                     </div>
                     {(() => {
@@ -175,7 +175,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
         )}
       </div>
 
-      <div className="bg-slate-50 px-6 py-5 border-t border-slate-200">
+      <div className="bg-muted px-6 sm:px-8 py-5 border-t border-border">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 cursor-pointer select-none" onClick={() => setShowComments(!showComments)}>
             <MessageSquare className="w-4 h-4 text-slate-400" />
@@ -197,7 +197,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
               <div className="space-y-4 mb-4">
                 {commentsData?.items?.length > 0 ? (
                   commentsData.items.map((c, index) => (
-                    <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div key={`${c.author_email}-${c.created_at}-${index}`} className="bg-card p-5 rounded-lg border border-border shadow-sm">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">

@@ -13,8 +13,8 @@ const SentimentDistributionChart = ({ data }) => {
 
   if (!hasData) {
     return (
-      <div className="flex items-center justify-center h-full w-full min-h-[250px] bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-        <p className="text-sm text-slate-400">No sentiment data available.</p>
+      <div className="flex items-center justify-center h-full w-full min-h-[250px] bg-muted rounded-lg border border-border border-dashed">
+        <p className="text-sm text-muted-foreground">No sentiment data available.</p>
       </div>
     );
   }

@@ -3,8 +3,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export const FeedbackOverTimeChart = ({ data }) => {
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full w-full min-h-[250px] bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-        <p className="text-sm text-slate-400">No timeline data available.</p>
+      <div className="flex items-center justify-center h-full w-full min-h-[250px] bg-muted rounded-lg border border-border border-dashed">
+        <p className="text-sm text-muted-foreground">No timeline data available.</p>
       </div>
     );
   }

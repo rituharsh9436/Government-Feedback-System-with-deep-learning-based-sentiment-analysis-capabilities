@@ -12,7 +12,11 @@ import {
 
 const TrendLineChart = ({ data }) => {
   if (!data || data.length === 0) {
-    return <div className="text-gray-500 text-center">No trend data available.</div>;
+    return (
+      <div className="flex items-center justify-center h-full w-full min-h-[250px] bg-muted rounded-lg border border-border border-dashed">
+        <p className="text-sm text-muted-foreground">No trend data available.</p>
+      </div>
+    );
   }
 
   return (
