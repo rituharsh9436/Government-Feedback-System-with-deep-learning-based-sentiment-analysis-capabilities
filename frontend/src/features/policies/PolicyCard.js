@@ -179,7 +179,7 @@ export const PolicyCard = ({ policy, onRepost }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 cursor-pointer select-none" onClick={() => setShowComments(!showComments)}>
             <MessageSquare className="w-4 h-4 text-slate-400" />
-            Public replies ({commentsData?.total !== undefined ? commentsData.total : (policy.comment_count || 0)})
+            Public replies ({policy.comment_count || 0})
           </h3>
           <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)} className="h-8 text-xs">
             {showComments ? 'Hide Replies' : 'Show Replies'}
