@@ -57,7 +57,7 @@ export const AuthPage = () => {
               Platform is live
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
+            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-white">
               Smart Policy Feedback & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">Sentiment Analysis</span>.
             </h1>
             <p className="text-lg text-slate-300 max-w-lg font-medium">
