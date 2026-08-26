@@ -176,7 +176,7 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
                         sentiment_model_version = first_result.get("model_version")
                         
                         # Update the specific comment in the database
-                        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
+                        match_cond = {"_id": ObjectId(comment_id)} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
                         await db_connection.db["comments"].update_one(
                             match_cond,
                             {
@@ -207,7 +207,7 @@ async def process_comment_sentiment_bg(policy_id: str, email: str, comment_text:
     # If we get here, all retries failed or a permanent error occurred
     app_logger.error(f"ML Service failed to process comment {comment_id or email} after {max_retries} retries. Marking as failed.")
     try:
-        match_cond = {"id": comment_id} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
+        match_cond = {"_id": ObjectId(comment_id)} if comment_id else {"author_email": email, "content": comment_text, "sentiment": "pending", "post_id": parse_policy_id(policy_id)}
         await db_connection.db["comments"].update_one(
             match_cond,
             {
@@ -228,20 +228,27 @@ async def add_comment_to_post(policy_id: str, email: str, comment_data: dict, ba
     if not post:
         raise HTTPException(status_code=404, detail="Policy not found")
         
-    # Check rate limit (max 3 comments per user per post)
-    user_comment_count = await db_connection.db["comments"].count_documents({
-        "post_id": object_id,
-        "author_email": email
-    })
-    
-    if user_comment_count >= 3:
-        raise HTTPException(status_code=400, detail="You may only post three replies per policy")
-    
     # Mark sentiment as pending initially
     comment_data["sentiment"] = "pending"
     comment_data["post_id"] = object_id
     
-    await db_connection.db["comments"].insert_one(comment_data)
+    result = await db_connection.db["comments"].insert_one(comment_data)
+    
+    # Check rate limit using optimistic insert (max 3 comments per user per post)
+    first_three_cursor = db_connection.db["comments"].find(
+        {"post_id": object_id, "author_email": email},
+        {"_id": 1}
+    ).sort([("created_at", 1), ("_id", 1)]).limit(3)
+    
+    first_three = await first_three_cursor.to_list(length=3)
+    allowed_ids = [c["_id"] for c in first_three]
+    
+    if result.inserted_id not in allowed_ids:
+        # We exceeded the limit (we are 4th or later)
+        await db_connection.db["comments"].delete_one({"_id": result.inserted_id})
+        raise HTTPException(status_code=400, detail="You may only post three replies per policy")
+        
+    user_comment_count = len(allowed_ids)
     
     await db_connection.db["posts"].update_one(
         {"_id": object_id},
@@ -249,9 +256,9 @@ async def add_comment_to_post(policy_id: str, email: str, comment_data: dict, ba
     )
             
     if comment_data.get("content"):
-        background_tasks.add_task(process_comment_sentiment_bg, policy_id, email, comment_data["content"], comment_data.get("id"))
+        background_tasks.add_task(process_comment_sentiment_bg, policy_id, email, comment_data["content"], str(result.inserted_id))
             
-    return max(0, 3 - (user_comment_count + 1))
+    return max(0, 3 - user_comment_count)
 
 async def delete_post_by_id(policy_id: str, user_role: str, user_email: str):
     query = {"_id": parse_policy_id(policy_id)}

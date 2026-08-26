@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000"]
+    ENVIRONMENT: str = "production"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

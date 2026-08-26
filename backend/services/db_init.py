@@ -77,6 +77,30 @@ async def safe_create_index(collection_name: str, keys: list, options: dict):
 async def setup_indexes():
     app_logger.info("Ensuring database indexes...")
     try:
+        # Normalize emails to lowercase before enforcing unique index
+        for collection_name in ["users", "pending_users"]:
+            cursor = db_connection.db[collection_name].find({"email": {"$regex": "[A-Z]"}})
+            async for doc in cursor:
+                lower_email = doc.get("email", "").lower()
+                if lower_email:
+                    try:
+                        await db_connection.db[collection_name].update_one(
+                            {"_id": doc["_id"]},
+                            {"$set": {"email": lower_email}}
+                        )
+                    except pymongo.errors.DuplicateKeyError:
+                        app_logger.warning(f"Duplicate email found during normalization in {collection_name}: {lower_email}. Manual resolution required.")
+
+        for collection_name in ["posts", "comments"]:
+            cursor = db_connection.db[collection_name].find({"author_email": {"$regex": "[A-Z]"}})
+            async for doc in cursor:
+                lower_email = doc.get("author_email", "").lower()
+                if lower_email:
+                    await db_connection.db[collection_name].update_one(
+                        {"_id": doc["_id"]},
+                        {"$set": {"author_email": lower_email}}
+                    )
+
         indexes_to_create = [
             {
                 "collection": "users",
@@ -112,6 +136,11 @@ async def setup_indexes():
                 "collection": "comments",
                 "keys": [("sentiment_score", pymongo.DESCENDING)],
                 "options": {"background": True, "name": "comments_sentiment_score"}
+            },
+            {
+                "collection": "comments",
+                "keys": [("sentiment", pymongo.ASCENDING)],
+                "options": {"background": True, "name": "comments_sentiment"}
             },
             {
                 "collection": "posts",

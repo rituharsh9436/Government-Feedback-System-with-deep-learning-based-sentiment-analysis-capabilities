@@ -11,6 +11,10 @@ class UserSignup(BaseModel):
     department_name: Optional[str] = Field(default=None, min_length=2, max_length=150, strip_whitespace=True)
     department_id: Optional[str] = Field(default=None, min_length=2, max_length=50, strip_whitespace=True)
 
+    @field_validator("email", mode="before")
+    def lowercase_email(cls, v):
+        return v.lower() if isinstance(v, str) else v
+
     @field_validator("password")
     def validate_password_complexity(cls, v):
         if not re.search(r"[A-Z]", v):
@@ -32,6 +36,10 @@ class UserSignup(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("email", mode="before")
+    def lowercase_email(cls, v):
+        return v.lower() if isinstance(v, str) else v
 
 class Token(BaseModel):
     access_token: str

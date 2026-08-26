@@ -32,45 +32,38 @@ async def analyze_comments(standalone: bool = True):
         ]
     }
     
-    comments_cursor = db_connection.db["comments"].find(query)
-    
-    comments_to_process = []
-    
-    async for comment in comments_cursor:
-        # If comment text is completely empty, skip it
-        if not comment.get("content") or not comment.get("content").strip():
-            continue
-            
-        comments_to_process.append({
-            "comment_id": comment.get("_id"),
-            "post_id": comment.get("post_id"),
-            "author_email": comment.get("author_email"),
-            "content": comment.get("content")
-        })
-                
-    logger.info(f"Found {len(comments_to_process)} comments requiring analysis.")
-    
-    if not comments_to_process:
-        logger.info("No comments to process. Exiting.")
-        if standalone:
-            await close_mongo_connection()
-        return
-
-    ml_service_url = f"{settings.ML_SERVICE_URL}/analyze"
-    api_key = getattr(settings, "ML_SERVICE_API_KEY", None) or ""
-    
-    bulk_operations = []
+    processed_ids = set()
     processed_count = 0
     failed_count = 0
     
+    ml_service_url = f"{settings.ML_SERVICE_URL}/analyze"
+    api_key = getattr(settings, "ML_SERVICE_API_KEY", None) or ""
+
     async with httpx.AsyncClient(timeout=60.0) as client:
-        # Process in batches
-        for i in range(0, len(comments_to_process), BATCH_SIZE):
-            batch = comments_to_process[i:i + BATCH_SIZE]
-            texts = [c["content"] for c in batch]
+        while True:
+            current_query = dict(query)
+            if processed_ids:
+                current_query["_id"] = {"$nin": list(processed_ids)}
+                
+            batch = await db_connection.db["comments"].find(current_query).limit(BATCH_SIZE).to_list(length=BATCH_SIZE)
             
-            logger.info(f"Processing batch {i // BATCH_SIZE + 1}, size {len(batch)}...")
+            if not batch:
+                break
+                
+            comments_to_process = []
+            for comment in batch:
+                processed_ids.add(comment["_id"])
+                if not comment.get("content") or not comment.get("content").strip():
+                    continue
+                comments_to_process.append(comment)
+                
+            if not comments_to_process:
+                continue
+                
+            texts = [c["content"] for c in comments_to_process]
+            logger.info(f"Processing batch of size {len(comments_to_process)}...")
             
+            bulk_operations = []
             try:
                 response = await client.post(
                     ml_service_url,
@@ -82,19 +75,15 @@ async def analyze_comments(standalone: bool = True):
                     analysis_data = response.json()
                     results = analysis_data.get("results", [])
                     
-                    if len(results) != len(batch):
-                        logger.error(f"Mismatch in ML service response: expected {len(batch)} results, got {len(results)}")
-                        failed_count += len(batch)
+                    if len(results) != len(comments_to_process):
+                        logger.error(f"Mismatch in ML service response: expected {len(comments_to_process)} results, got {len(results)}")
+                        failed_count += len(comments_to_process)
                         continue
                         
                     for j, result in enumerate(results):
-                        c = batch[j]
-                        
-                        match_cond = {"_id": c["comment_id"]}
-                            
-                        # Prepare update operation
+                        c = comments_to_process[j]
                         update_op = UpdateOne(
-                            match_cond,
+                            {"_id": c["_id"]},
                             {
                                 "$set": {
                                     "sentiment": result.get("label"),
@@ -105,21 +94,19 @@ async def analyze_comments(standalone: bool = True):
                         )
                         bulk_operations.append(update_op)
                         processed_count += 1
-                        
                 else:
                     logger.error(f"ML service returned status {response.status_code}: {response.text}")
-                    failed_count += len(batch)
+                    failed_count += len(comments_to_process)
             except Exception as e:
                 logger.error(f"Error calling ML service for batch: {e}")
-                failed_count += len(batch)
+                failed_count += len(comments_to_process)
 
-    if bulk_operations:
-        logger.info(f"Executing {len(bulk_operations)} bulk update operations on database...")
-        try:
-            result = await db_connection.db["comments"].bulk_write(bulk_operations, ordered=False)
-            logger.info(f"Bulk update complete. Modified {result.modified_count} documents.")
-        except Exception as e:
-            logger.error(f"Error executing bulk write: {e}")
+            if bulk_operations:
+                try:
+                    result = await db_connection.db["comments"].bulk_write(bulk_operations, ordered=False)
+                    logger.info(f"Bulk update complete. Modified {result.modified_count} documents.")
+                except Exception as e:
+                    logger.error(f"Error executing bulk write: {e}")
             
     logger.info(f"Migration finished. Successfully analyzed: {processed_count}, Failed: {failed_count}")
     

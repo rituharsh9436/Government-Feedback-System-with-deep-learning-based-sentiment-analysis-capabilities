@@ -91,7 +91,6 @@ async def save_policy_comment(
     user: dict = Depends(RequireRole(["public"]))
 ):
     comment_data = {
-        "id": comment.id,
         "content": comment.content,
         "author_email": user["email"],
         "author_role": "public",

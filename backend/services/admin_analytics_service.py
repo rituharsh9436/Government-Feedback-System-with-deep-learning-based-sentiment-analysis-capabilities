@@ -58,9 +58,6 @@ async def get_overview(department: Optional[str] = None, date_from: Optional[dat
                 "avg_confidence": [
                     {"$match": {"sentiment_score": {"$exists": True, "$type": "number"}}},
                     {"$group": {"_id": None, "avg_score": {"$avg": "$sentiment_score"}}}
-                ],
-                "policies": [
-                    {"$group": {"_id": "$post_id"}}
                 ]
             }
         })
@@ -74,8 +71,19 @@ async def get_overview(department: Optional[str] = None, date_from: Optional[dat
         result = result_list[0]
         
         total_feedback = result["total_comments"][0]["count"] if result["total_comments"] else 0
-        total_policies = len(result["policies"])
         avg_confidence = result["avg_confidence"][0]["avg_score"] if result["avg_confidence"] else 0
+        
+        # Calculate total_policies directly from posts
+        post_match = {}
+        if department and department.lower() != "central":
+            departments = [d.strip() for d in department.split(",") if d.strip()]
+            if departments:
+                post_match["category"] = {"$in": departments}
+        date_match = build_date_match(date_from, date_to)
+        if date_match:
+            post_match.update(date_match)
+            
+        total_policies = await db_connection.db["posts"].count_documents(post_match)
         
         sentiments = {item["_id"]: item["count"] for item in result["sentiment_counts"]}
         pos = sentiments.get("POSITIVE", 0)
@@ -174,20 +182,58 @@ async def get_trends(department: Optional[str] = None, date_from: Optional[datet
 
 async def get_policies(department: Optional[str] = None, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None, page: int = 1, limit: int = 10):
     try:
-        pipeline = await _get_base_pipeline(department, date_from, date_to)
+        pipeline = []
+        
+        match = {}
+        if department and department.lower() != "central":
+            departments = [d.strip() for d in department.split(",") if d.strip()]
+            if departments:
+                match["category"] = {"$in": departments}
+                
+        date_match = build_date_match(date_from, date_to)
+        if date_match:
+            match.update(date_match)
+            
+        if match:
+            pipeline.append({"$match": match})
+            
         skip = (page - 1) * limit
         
         pipeline.extend([
             {
-                "$group": {
-                    "_id": "$post_id",
-                    "title": {"$first": "$post_info.title"},
-                    "category": {"$first": "$post_info.category"},
-                    "total_comments": {"$sum": 1},
-                    "avg_confidence": {"$avg": {"$cond": [{"$eq": [{"$type": "$sentiment_score"}, "number"]}, "$sentiment_score", None]}},
-                    "positive": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "POSITIVE"]}, 1, 0]}},
-                    "negative": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEGATIVE"]}, 1, 0]}},
-                    "neutral": {"$sum": {"$cond": [{"$eq": [{"$toUpper": "$sentiment"}, "NEUTRAL"]}, 1, 0]}}
+                "$lookup": {
+                    "from": "comments",
+                    "localField": "_id",
+                    "foreignField": "post_id",
+                    "as": "policy_comments"
+                }
+            },
+            {
+                "$addFields": {
+                    "valid_scores": {
+                        "$map": {
+                            "input": {
+                                "$filter": {
+                                    "input": "$policy_comments",
+                                    "as": "c",
+                                    "cond": {"$eq": [{"$type": "$$c.sentiment_score"}, "number"]}
+                                }
+                            },
+                            "as": "valid_c",
+                            "in": "$$valid_c.sentiment_score"
+                        }
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "category": 1,
+                    "total_comments": {"$size": "$policy_comments"},
+                    "avg_confidence": {"$avg": "$valid_scores"},
+                    "positive": {"$size": {"$filter": {"input": "$policy_comments", "as": "c", "cond": {"$eq": [{"$toUpper": "$$c.sentiment"}, "POSITIVE"]}}}},
+                    "negative": {"$size": {"$filter": {"input": "$policy_comments", "as": "c", "cond": {"$eq": [{"$toUpper": "$$c.sentiment"}, "NEGATIVE"]}}}},
+                    "neutral": {"$size": {"$filter": {"input": "$policy_comments", "as": "c", "cond": {"$eq": [{"$toUpper": "$$c.sentiment"}, "NEUTRAL"]}}}}
                 }
             },
             {"$sort": {"total_comments": -1, "_id": -1}},
@@ -199,7 +245,7 @@ async def get_policies(department: Optional[str] = None, date_from: Optional[dat
             }
         ])
 
-        cursor = db_connection.db["comments"].aggregate(pipeline)
+        cursor = db_connection.db["posts"].aggregate(pipeline)
         results = await cursor.to_list(length=1)
         
         if not results:

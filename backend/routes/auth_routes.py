@@ -154,10 +154,13 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
     refresh_token, _ = create_refresh_token(data={"sub": user.email, "role": user.role.value})
     csrf_token = generate_csrf_token()
 
+    is_secure = settings.ENVIRONMENT == "production"
+    samesite_value = "none" if is_secure else "lax"
+    
     # Set HttpOnly Cookies
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
-    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400) # Readable by JS for headers
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=is_secure, samesite=samesite_value, max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=is_secure, samesite=samesite_value, max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False, secure=is_secure, samesite=samesite_value, max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400) # Readable by JS for headers
 
     await log_audit_action("login", user.email)
     return {"message": "Successfully logged in", "role": user.role.value, "csrf_token": csrf_token}
@@ -198,9 +201,12 @@ async def refresh_token(request: Request, response: Response):
     new_refresh_token, _ = create_refresh_token(data={"sub": email, "role": role})
     new_csrf_token = generate_csrf_token()
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
-    response.set_cookie(key="csrf_token", value=new_csrf_token, httponly=False, secure=True, samesite="none", max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    is_secure = settings.ENVIRONMENT == "production"
+    samesite_value = "none" if is_secure else "lax"
+    
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=is_secure, samesite=samesite_value, max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(key="refresh_token", value=new_refresh_token, httponly=True, secure=is_secure, samesite=samesite_value, max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    response.set_cookie(key="csrf_token", value=new_csrf_token, httponly=False, secure=is_secure, samesite=samesite_value, max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
     
     return {"message": "Tokens refreshed successfully", "csrf_token": new_csrf_token}
 
@@ -219,9 +225,11 @@ async def logout(request: Request, response: Response, current_user: dict = Depe
                 if refresh_jti:
                     await db_connection.db["token_blocklist"].update_one({"jti": refresh_jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
     finally:
-        response.delete_cookie(key="access_token", secure=True, samesite="none")
-        response.delete_cookie(key="refresh_token", secure=True, samesite="none")
-        response.delete_cookie(key="csrf_token", secure=True, samesite="none")
+        is_secure = settings.ENVIRONMENT == "production"
+        samesite_value = "none" if is_secure else "lax"
+        response.delete_cookie(key="access_token", secure=is_secure, samesite=samesite_value)
+        response.delete_cookie(key="refresh_token", secure=is_secure, samesite=samesite_value)
+        response.delete_cookie(key="csrf_token", secure=is_secure, samesite=samesite_value)
     
     await log_audit_action("logout", current_user["email"])
     return {"message": "Successfully logged out"}
@@ -282,6 +290,11 @@ async def delete_me(request: Request, response: Response, current_user: dict = D
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
+    if user["role"] == UserRole.ADMIN.value:
+        admin_count = await db_connection.db["users"].count_documents({"role": UserRole.ADMIN.value})
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot delete the last admin account")
+        
     # Delete the user
     await db_connection.db["users"].delete_one({"email": current_user["email"]})
     
@@ -309,9 +322,11 @@ async def delete_me(request: Request, response: Response, current_user: dict = D
                 if refresh_jti:
                     await db_connection.db["token_blocklist"].update_one({"jti": refresh_jti}, {"$set": {"revoked_at": datetime.utcnow()}}, upsert=True)
     finally:
-        response.delete_cookie(key="access_token", secure=True, samesite="none")
-        response.delete_cookie(key="refresh_token", secure=True, samesite="none")
-        response.delete_cookie(key="csrf_token", secure=True, samesite="none")
+        is_secure = settings.ENVIRONMENT == "production"
+        samesite_value = "none" if is_secure else "lax"
+        response.delete_cookie(key="access_token", secure=is_secure, samesite=samesite_value)
+        response.delete_cookie(key="refresh_token", secure=is_secure, samesite=samesite_value)
+        response.delete_cookie(key="csrf_token", secure=is_secure, samesite=samesite_value)
     
     await log_audit_action("delete_account", current_user["email"])
     return {"message": "Account deleted successfully"}
