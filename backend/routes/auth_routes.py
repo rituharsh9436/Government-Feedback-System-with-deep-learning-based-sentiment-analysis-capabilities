@@ -344,6 +344,7 @@ async def list_managed_users(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     role: Optional[str] = Query(None),
+    email: Optional[str] = Query(None, description="Search by email"),
     current_user: dict = Depends(get_current_user)
 ):
     require_admin(current_user)
@@ -354,6 +355,9 @@ async def list_managed_users(
         query["role"] = role
     else:
         query["role"] = {"$in": [UserRole.PUBLIC.value, UserRole.GOVT.value]}
+        
+    if email:
+        query["email"] = {"$regex": email, "$options": "i"}
         
     total = await db_connection.db["users"].count_documents(query)
     

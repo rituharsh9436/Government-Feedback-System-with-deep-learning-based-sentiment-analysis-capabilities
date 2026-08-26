@@ -1,13 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../api/client';
 import toast from 'react-hot-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export const useAdmin = () => {
   const queryClient = useQueryClient();
   const [reqPage, setReqPage] = useState(1);
   const [govtUsersPage, setGovtUsersPage] = useState(1);
   const [publicUsersPage, setPublicUsersPage] = useState(1);
+  const [searchEmail, setSearchEmail] = useState('');
+
+  useEffect(() => {
+    setGovtUsersPage(1);
+    setPublicUsersPage(1);
+  }, [searchEmail]);
 
   const { data: requestsData, isLoading: isRequestsLoading } = useQuery({
     queryKey: ['government-requests', reqPage],
@@ -15,13 +21,13 @@ export const useAdmin = () => {
   });
 
   const { data: govtUsersData, isLoading: isGovtUsersLoading } = useQuery({
-    queryKey: ['users', 'govt', govtUsersPage],
-    queryFn: () => request(`/auth/users?role=govt&page=${govtUsersPage}&limit=10`),
+    queryKey: ['users', 'govt', govtUsersPage, searchEmail],
+    queryFn: () => request(`/auth/users?role=govt&page=${govtUsersPage}&limit=10${searchEmail ? `&email=${encodeURIComponent(searchEmail)}` : ''}`),
   });
 
   const { data: publicUsersData, isLoading: isPublicUsersLoading } = useQuery({
-    queryKey: ['users', 'public', publicUsersPage],
-    queryFn: () => request(`/auth/users?role=public&page=${publicUsersPage}&limit=10`),
+    queryKey: ['users', 'public', publicUsersPage, searchEmail],
+    queryFn: () => request(`/auth/users?role=public&page=${publicUsersPage}&limit=10${searchEmail ? `&email=${encodeURIComponent(searchEmail)}` : ''}`),
   });
 
   const approveMutation = useMutation({
@@ -66,6 +72,9 @@ export const useAdmin = () => {
     publicUsersPages: publicUsersData?.pages || 1,
     publicUsersPage,
     setPublicUsersPage,
+    
+    searchEmail,
+    setSearchEmail,
     
     isLoading: isRequestsLoading || isGovtUsersLoading || isPublicUsersLoading,
     approve: approveMutation.mutate,

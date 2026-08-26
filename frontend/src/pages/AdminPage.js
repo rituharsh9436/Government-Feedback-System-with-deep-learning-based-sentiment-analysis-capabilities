@@ -2,18 +2,26 @@ import { useAdmin } from '../hooks/useAdmin';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import toast from 'react-hot-toast';
-import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2, Server, DatabaseZap, LineChart } from 'lucide-react';
+import { ShieldCheck, UserX, RefreshCw, Users, CheckCircle2, Building2, Server, DatabaseZap, LineChart, Search } from 'lucide-react';
 import { policiesAPI } from '../api/policies';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminPage = () => {
-  const { requests, requestsTotal, requestsPages, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPages, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPages, publicUsersPage, setPublicUsersPage, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
+  const { requests, requestsTotal, requestsPages, reqPage, setReqPage, govtUsers, govtUsersTotal, govtUsersPages, govtUsersPage, setGovtUsersPage, publicUsers, publicUsersTotal, publicUsersPages, publicUsersPage, setPublicUsersPage, searchEmail, setSearchEmail, isLoading, isApproving, isDeleting, approve, deleteUser, refetch } = useAdmin();
   const isProcessing = isApproving || isDeleting;
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   const [userListTab, setUserListTab] = useState('govt');
+  const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchEmail(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput, setSearchEmail]);
 
   const availableTabs = [
     { id: 'users', label: 'User Management', icon: Users },
@@ -153,27 +161,40 @@ export const AdminPage = () => {
           <Badge variant="primary">{currentTotal} Accounts</Badge>
         </div>
 
-        <div className="flex space-x-1 bg-slate-100/80 p-1 rounded-lg w-full max-w-sm">
-          <button
-            onClick={() => setUserListTab('govt')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-              userListTab === 'govt'
-                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-            }`}
-          >
-            Government
-          </button>
-          <button
-            onClick={() => setUserListTab('public')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-              userListTab === 'public'
-                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-            }`}
-          >
-            Public
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex space-x-1 bg-slate-100/80 p-1 rounded-lg w-full max-w-sm">
+            <button
+              onClick={() => setUserListTab('govt')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                userListTab === 'govt'
+                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              Government
+            </button>
+            <button
+              onClick={() => setUserListTab('public')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                userListTab === 'public'
+                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              Public
+            </button>
+          </div>
+          
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            />
+          </div>
         </div>
         
         <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
