@@ -22,8 +22,8 @@ export const AuthPage = () => {
   const handleSignupSuccess = (role) => {
     setMode('login');
     setMessage(
-      role === 'govt' 
-        ? 'Request submitted for admin approval.' 
+      role === 'govt'
+        ? 'Request submitted for admin approval.'
         : 'Account created. Please sign in.'
     );
   };
@@ -43,46 +43,46 @@ export const AuthPage = () => {
           {/* subtle mesh overlay inside the dark side */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-90 z-0"></div>
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-slate-600/20 blur-[100px] rounded-full z-0 pointer-events-none"></div>
-          
+
           <div className="relative z-10 flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl shadow-slate-900/50 border border-slate-700">
               <span className="text-white font-bold text-2xl tracking-tighter">SF</span>
             </div>
-            <span className="text-xl font-bold tracking-tight">SmartGov</span>
+            <span className="text-xl font-bold tracking-tight">SGFS-V.0.1</span>
           </div>
-          
+
           <div className={`relative z-10 space-y-5 lg:space-y-6 transition-all duration-1000 ease-out transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/80 backdrop-blur-md">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
               Platform is live
             </div>
-            
+
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.1] text-white">
               Smart Policy Feedback & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">Sentiment Analysis</span>.
             </h1>
             <p className="text-base lg:text-lg text-slate-300 max-w-lg font-medium">
               Connecting citizens and policymakers. Share feedback on active policies and help the government make data-driven decisions through AI-powered sentiment analysis.
             </p>
-            
+
             {/* Feature Pills */}
             <div className="pt-6 lg:pt-8 flex flex-wrap gap-3">
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
-                 <MessageSquare className="w-4 h-4 text-slate-300" />
-                 <span className="text-xs lg:text-sm font-medium">Policy Feedback</span>
-               </div>
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
-                 <Activity className="w-4 h-4 text-blue-400" />
-                 <span className="text-xs lg:text-sm font-medium">AI Sentiment Analysis</span>
-               </div>
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
-                 <Shield className="w-4 h-4 text-violet-400" />
-                 <span className="text-xs lg:text-sm font-medium">Data-driven Decisions</span>
-               </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
+                <MessageSquare className="w-4 h-4 text-slate-300" />
+                <span className="text-xs lg:text-sm font-medium">Policy Feedback</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
+                <Activity className="w-4 h-4 text-blue-400" />
+                <span className="text-xs lg:text-sm font-medium">AI Sentiment Analysis</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
+                <Shield className="w-4 h-4 text-violet-400" />
+                <span className="text-xs lg:text-sm font-medium">Data-driven Decisions</span>
+              </div>
             </div>
           </div>
-          
+
           <div className="relative z-10 flex items-center justify-between text-sm text-slate-400">
-            <p>© {new Date().getFullYear()} SmartGov. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} SGFS-V.0.1. All rights reserved.</p>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export const AuthPage = () => {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 shadow-md">
               <span className="text-white font-bold text-xl tracking-tighter">SF</span>
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">SmartGov</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900">SGFS-V.0.1</span>
           </div>
 
           <div className={`w-full max-w-md transition-all duration-700 delay-300 ease-out transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
@@ -102,12 +102,12 @@ export const AuthPage = () => {
                 {mode === 'login' ? 'Welcome back' : 'Create an account'}
               </h2>
               <p className="mt-2 text-sm text-slate-500">
-                {mode === 'login' 
-                  ? 'Enter your credentials to access your account' 
+                {mode === 'login'
+                  ? 'Enter your credentials to access your account'
                   : 'Join the Smart Government Feedback platform'}
               </p>
             </div>
-            
+
             <div className="bg-white py-8 px-4 sm:px-10 shadow-soft sm:rounded-3xl border border-slate-100">
               {message && (
                 <div className="mb-6 rounded-xl bg-emerald-50 p-4 border border-emerald-100 flex items-start gap-3 animate-fade-in">
@@ -117,14 +117,14 @@ export const AuthPage = () => {
                   <p className="text-sm font-medium text-emerald-800">{message}</p>
                 </div>
               )}
-              
+
               {mode === 'login' ? (
                 <LoginForm onToggleMode={() => setMode('signup')} />
               ) : (
                 <SignupForm onToggleMode={() => setMode('login')} onSuccess={handleSignupSuccess} />
               )}
             </div>
-            
+
             <p className="mt-8 text-center text-xs text-slate-400">
               By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>

@@ -11,21 +11,21 @@ export const Layout = () => {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-white/80 backdrop-blur-md shadow-sm transition-all">
         <div className="container mx-auto max-w-5xl px-6 h-16 flex items-center justify-between">
           <div className="flex flex-col">
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="text-lg font-bold tracking-tight text-foreground hover:text-primary transition-colors flex items-center gap-2"
             >
               <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-sm">
                 SF
               </div>
-              SmartGov
+              SGFS-V.0.1
             </Link>
           </div>
-          
+
           {user ? (
             <div className="flex items-center gap-6">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -34,15 +34,15 @@ export const Layout = () => {
 
               {user.role === 'admin' && (
                 <>
-                  <Link 
-                    to="/admin" 
+                  <Link
+                    to="/admin"
                     className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     Admin
                   </Link>
-                  <Link 
-                    to="/admin/analytics" 
+                  <Link
+                    to="/admin/analytics"
                     className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
                   >
                     <LineChart className="w-4 h-4" />
@@ -50,9 +50,9 @@ export const Layout = () => {
                   </Link>
                 </>
               )}
-              
-              <Link 
-                to="/settings" 
+
+              <Link
+                to="/settings"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
                 <Settings className="w-4 h-4" />
@@ -68,7 +68,7 @@ export const Layout = () => {
                   <span className="text-xs text-slate-500 mt-1 capitalize">{user.role}</span>
                 </div>
               </div>
-              
+
               <Button variant="ghost" size="sm" onClick={logout} className="text-slate-600">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign out
@@ -86,7 +86,7 @@ export const Layout = () => {
           )}
         </div>
       </header>
-      
+
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-8">
         <Outlet />
       </main>
