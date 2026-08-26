@@ -39,7 +39,7 @@ export const AuthPage = () => {
 
       <div className="flex w-full flex-col lg:flex-row z-10">
         {/* Left Side - Hero / Branding */}
-        <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 lg:p-24 relative overflow-hidden bg-slate-900 text-white shadow-2xl">
+        <div className="hidden lg:flex w-1/2 flex-col justify-between p-10 lg:p-16 xl:p-20 relative overflow-hidden bg-slate-900 text-white shadow-2xl">
           {/* subtle mesh overlay inside the dark side */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-90 z-0"></div>
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-slate-600/20 blur-[100px] rounded-full z-0 pointer-events-none"></div>
@@ -51,32 +51,32 @@ export const AuthPage = () => {
             <span className="text-xl font-bold tracking-tight">SmartGov</span>
           </div>
           
-          <div className={`relative z-10 space-y-6 transition-all duration-1000 ease-out transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+          <div className={`relative z-10 space-y-5 lg:space-y-6 transition-all duration-1000 ease-out transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/80 backdrop-blur-md">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
               Platform is live
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-white">
+            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.1] text-white">
               Smart Policy Feedback & <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">Sentiment Analysis</span>.
             </h1>
-            <p className="text-lg text-slate-300 max-w-lg font-medium">
+            <p className="text-base lg:text-lg text-slate-300 max-w-lg font-medium">
               Connecting citizens and policymakers. Share feedback on active policies and help the government make data-driven decisions through AI-powered sentiment analysis.
             </p>
             
             {/* Feature Pills */}
-            <div className="pt-8 flex flex-wrap gap-4">
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 backdrop-blur-md">
+            <div className="pt-6 lg:pt-8 flex flex-wrap gap-3">
+               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
                  <MessageSquare className="w-4 h-4 text-slate-300" />
-                 <span className="text-sm font-medium">Policy Feedback</span>
+                 <span className="text-xs lg:text-sm font-medium">Policy Feedback</span>
                </div>
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 backdrop-blur-md">
+               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
                  <Activity className="w-4 h-4 text-blue-400" />
-                 <span className="text-sm font-medium">AI Sentiment Analysis</span>
+                 <span className="text-xs lg:text-sm font-medium">AI Sentiment Analysis</span>
                </div>
-               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 backdrop-blur-md">
+               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 lg:px-4 backdrop-blur-md">
                  <Shield className="w-4 h-4 text-violet-400" />
-                 <span className="text-sm font-medium">Data-driven Decisions</span>
+                 <span className="text-xs lg:text-sm font-medium">Data-driven Decisions</span>
                </div>
             </div>
           </div>
