@@ -99,7 +99,7 @@ Route traffic:
 
 The sentiment analysis component uses our fine-tuned **MuRIL (`muril_gov_sentiment_final`)** model, specifically developed for government feedback sentiment analysis over custom built dataset.
 
-**Model Repository:** [ `muril_gov_sentiment_final`]([YOUR_HUGGING_FACE_REPO_LINK](https://huggingface.co/ChanchalSh/Muril_Government_FinedTuned_Model/tree/main/muril_gov_sentiment_final))
+**Model Repository:** [ `muril_gov_sentiment_final`](https://huggingface.co/ChanchalSh/Muril_Government_FinedTuned_Model/tree/main/muril_gov_sentiment_final)
 
 The model is integrated into the ML service and can be loaded directly from Hugging Face using the `MODEL_ID` environment variable.
 ## ⚠ Academic Integrity Notice
