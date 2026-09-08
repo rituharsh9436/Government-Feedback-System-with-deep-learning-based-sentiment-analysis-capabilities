@@ -51,6 +51,12 @@ app.include_router(admin_analytics_router)
 
 START_TIME = time.time()
 
+
+@app.get("/apphealth", tags=["Monitoring"])
+async def app_health_check():
+    return {"status": "healthy", "uptime_seconds": time.time() - START_TIME}
+
+
 @app.get("/health", tags=["Monitoring"])
 async def health_check():
     db_status = "ok" if db_connection.client else "disconnected"
