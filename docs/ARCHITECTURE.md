@@ -50,7 +50,7 @@ flowchart TD
     Client -->|HTTPS Requests| FE
     FE -->|REST API Calls| API
     API <-->|Reads/Writes| DB
-    API -->|HTTP POST (Async)| ML
+    API -->|"HTTP POST (Async)"| ML
     ML -.->|Inference Result| API
 ```
 
